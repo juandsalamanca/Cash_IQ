@@ -45,7 +45,7 @@ def get_cc_debt_history(cc_spend_txn, asof_date):
 
     return cc_spend_cat_pivot, cc_spend_hist_start
 
-def project_cc_debt(cc_spend_hist_start):
+def project_cc_debt(cc_spend_cat_pivot, cc_spend_hist_start):
 
     # ensure week columns for CC spend history
     cc_hist_weeks = pd.date_range(start=cc_spend_hist_start, end=actual_week_starts[-1], freq="W-MON")
@@ -143,7 +143,7 @@ def spend_mix_for_window(window_week_starts, cc_spend_cat_pivot_top):
         return pd.Series({"Uncategorized": 1.0})
     return mix / mix.sum()
 
-def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top):
+def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_dates):
     # Compute monthly "statement" amount from projected CC spend:
     # For each payment date, pay the prior month's total projected CC spend magnitude.
     # We compute CC spend totals from cc_spend_proj_cat (weekly) and/or last actual weeks for the first payment.
@@ -217,4 +217,4 @@ def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top):
         columns=["payment_date","payment_week_start","estimated_payment_total","allocation_window_weeks","prior_month","cadence_inferred","typical_dom"]
     )
 
-    return cc_payment_schedule
+    return cc_payment_schedule, cc_payment_alloc
