@@ -23,13 +23,20 @@ date_strt = st.date_input("Select projection start date")
 
 projection_function = client_map[client]
 
-excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx")
+process = st.button("Process")
+
+if process:
+
+    if not(coa_file and gl_file and date_strt):
+        st.error("Please upload all required files and select a date.")
+
+    excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx")
 
 
-st.download_button(
-    label="Download Excel",
-    data=excel_bytes,
-    file_name=f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    icon=":material/download:",
-)
+    st.download_button(
+        label="Download Excel",
+        data=excel_bytes,
+        file_name=f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        icon=":material/download:",
+    )
