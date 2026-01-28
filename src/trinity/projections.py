@@ -57,7 +57,7 @@ def project_weekly_pattern(series_hist, proj_weeks):
     return pd.Series(proj, index=proj_weeks, dtype=float)
 
 
-def project_cadenced_events(dates, amounts, proj_start, proj_end):
+def project_cadenced_events(dates, amounts, proj_start, proj_end, cadence_start, cadence_end):
     """
     Schedule future events based on cadence kind; return list of (date, amount_signed)
     Amount uses median of past event amounts (signed).
@@ -68,7 +68,7 @@ def project_cadenced_events(dates, amounts, proj_start, proj_end):
     if len(dates) == 0:
         return []
 
-    kind = classify_cadence(dates)
+    kind = classify_cadence(dates, cadence_start, cadence_end)
     amt_med = float(pd.Series(amounts).replace(0, np.nan).dropna().median()) if (pd.Series(amounts) != 0).any() else 0.0
     last_date = pd.Timestamp(dates.max())
 
@@ -153,7 +153,7 @@ def build_weekly_series(transactions_df, week_index):
     s = transactions_df.groupby(wk)["amount"].sum()
     return s.reindex(week_index, fill_value=0.0)
 
-def classify_cadence(date_series: pd.Series):
+def classify_cadence(date_series: pd.Series, cadence_start, cadence_end) -> str:
 
     # We need to add the cadence end and start dates to the ds variable
     # This way the take into account the whole year and not get isolated events passed as weekly, monthy, etc
@@ -179,7 +179,7 @@ def week_of_year(ts):
     ts = pd.Timestamp(ts)
     return int(((ts.month-1) * 30.5 + float(ts.day))/7)
 
-def replicate_last_year_transactions(s_hist):
+def replicate_last_year_transactions(s_hist, proj_week_starts):
     week_of_year_transaction_map = {}
     for w in s_hist.index:
         week_of_year_transaction_map[week_of_year(w)] = s_hist[w]

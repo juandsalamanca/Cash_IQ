@@ -1,9 +1,9 @@
 from src.trinity.preprocessing import monday_week_start
-from src.trinity.projections import week_of_month, project_weekly_pattern
+from src.trinity.projections import week_of_month, project_weekly_pattern, classify_cadence
 import pandas as pd
 
 
-def begin_cc(gl):
+def begin_cc(gl, bank_accounts, cc_accounts):
 
     # =========================
     # CREDIT CARD SPEND (NOT CASH): CC ACCOUNT TRANSACTIONS
@@ -19,7 +19,7 @@ def begin_cc(gl):
     return cc_spend_txn
 
 
-def get_cc_debt_history(cc_spend_txn, asof_date):
+def get_cc_debt_history(cc_spend_txn, asof_date, PROJ_WEEK1_START, CC_SPEND_TS_WEEKS):
     # =========================
     # PROJECT CREDIT CARD SPEND (LIABILITY) + PROJECT CC PAYMENTS (CASH) + ALLOCATE CC PAYMENTS
     # =========================
@@ -45,7 +45,7 @@ def get_cc_debt_history(cc_spend_txn, asof_date):
 
     return cc_spend_cat_pivot, cc_spend_hist_start
 
-def project_cc_debt(cc_spend_cat_pivot, cc_spend_hist_start):
+def project_cc_debt(cc_spend_cat_pivot, cc_spend_hist_start, TOP_N_CC_CATS, proj_week_starts, actual_week_starts):
 
     # ensure week columns for CC spend history
     cc_hist_weeks = pd.date_range(start=cc_spend_hist_start, end=actual_week_starts[-1], freq="W-MON")
@@ -84,7 +84,7 @@ def project_cc_debt(cc_spend_cat_pivot, cc_spend_hist_start):
     return cc_spend_proj_cat, cc_spend_cat_pivot_top
 
 
-def project_cc_payments(hist_ccpay_bank, asof_date):
+def project_cc_payments(hist_ccpay_bank, asof_date, PROJ_WEEK1_START, proj_end_date, cadence_start, cadence_end):
 
         # 2) Project CC payments (cash) on realistic cadence inferred from historical bank->CC payments
     #    - Determine typical payment cadence & timing from bank-side payments
@@ -93,7 +93,7 @@ def project_cc_payments(hist_ccpay_bank, asof_date):
     #
     # Payment timing inference:
     ccpay_dates = hist_ccpay_bank["date"].sort_values()
-    ccpay_kind = classify_cadence(ccpay_dates) if len(ccpay_dates) else "monthly"
+    ccpay_kind = classify_cadence(ccpay_dates, cadence_start, cadence_end) if len(ccpay_dates) else "monthly"
 
     # Typical day-of-month for payment (use mode)
     if len(ccpay_dates):
@@ -126,9 +126,9 @@ def project_cc_payments(hist_ccpay_bank, asof_date):
 
     payment_event_dates = sorted(payment_event_dates)
 
-    return payment_event_dates
+    return payment_event_dates, ccpay_kind, dom_mode
 
-def spend_mix_for_window(window_week_starts, cc_spend_cat_pivot_top):
+def spend_mix_for_window(window_week_starts, cc_spend_cat_pivot_top, cc_spend_proj_cat):
     """
     rolling mix over a set of week_starts: use actual if available, else projected.
     returns shares by category over that window
@@ -143,7 +143,7 @@ def spend_mix_for_window(window_week_starts, cc_spend_cat_pivot_top):
         return pd.Series({"Uncategorized": 1.0})
     return mix / mix.sum()
 
-def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_dates):
+def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_dates, CC_MIX_ROLLING_WEEKS, proj_week_starts, idx_names, ccpay_kind, dom_mode):
     # Compute monthly "statement" amount from projected CC spend:
     # For each payment date, pay the prior month's total projected CC spend magnitude.
     # We compute CC spend totals from cc_spend_proj_cat (weekly) and/or last actual weeks for the first payment.
@@ -189,7 +189,7 @@ def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_d
         # Allocate across categories based on rolling mix window ending before payment date
         mix_end_week = monday_week_start(pd.Series([pay_date - pd.Timedelta(days=1)]))[0]
         mix_window_weeks = pd.date_range(end=mix_end_week, periods=CC_MIX_ROLLING_WEEKS, freq="W-MON")
-        shares = spend_mix_for_window(mix_window_weeks, cc_spend_cat_pivot_top)
+        shares = spend_mix_for_window(mix_window_weeks, cc_spend_cat_pivot_top, cc_spend_proj_cat)
 
         # allocate into the payment's week bucket
         pay_week = monday_week_start(pd.Series([pay_date]))[0]

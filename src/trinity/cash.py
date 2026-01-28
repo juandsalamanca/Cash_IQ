@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-from src.trinity.projections import build_weekly_series, project_weekly_pattern, project_cadenced_events, allocate_to_weeks, replicate_last_year_transactions
+from src.trinity.projections import (build_weekly_series, project_weekly_pattern, project_cadenced_events, 
+                                     allocate_to_weeks, replicate_last_year_transactions, week_of_month, 
+                                     is_weekly_flow)
 
 
 # =========================
@@ -13,7 +15,7 @@ def last_nonnull_balance(df_acct, asof_date, fallback=0.0):
         return float(df_acct.loc[df_acct["balance"].notna(), "balance"].iloc[-1])
     return float(fallback)
 
-def begin_cash(gl, coa):
+def begin_cash(gl, coa, PROJ_WEEK1_START, bank_accounts, cc_accounts):
     asof_date = PROJ_WEEK1_START - pd.Timedelta(days=1)
 
     beg_bal_by_bank = {}
@@ -39,7 +41,7 @@ def begin_cash(gl, coa):
     return bank_tx, beginning_cash_balance, asof_date
 
 
-def buil_actual_weekly_cash(bank_tx):
+def buil_actual_weekly_cash(bank_tx, all_week_starts):
 
     idx_names = ["split_account","split_type","split_detail_type"]
 
@@ -62,9 +64,9 @@ def buil_actual_weekly_cash(bank_tx):
             bank_actual_pivot[w] = 0.0
     bank_actual_pivot = bank_actual_pivot[all_week_starts]
 
-    return bank_actual_pivot
+    return bank_actual_pivot, idx_names
 
-def project_cash(bank_actual_pivot):
+def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, cc_accounts, proj_week_starts, PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names):
 
     # =========================
     # PROJECT BANK CASH LINES (non-CC-payment lines + CC payments separately)
@@ -89,7 +91,7 @@ def project_cash(bank_actual_pivot):
             proj_series = project_weekly_pattern(s_hist, proj_week_starts)
         else:
 
-            future_events = project_cadenced_events(df_line["date"], df_line["amount"], PROJ_WEEK1_START, proj_end_date)
+            future_events = project_cadenced_events(df_line["date"], df_line["amount"], PROJ_WEEK1_START, proj_end_date, cadence_start, cadence_end)
             if future_events:
                 dts, amts = zip(*future_events)
                 proj_series = allocate_to_weeks(dts, amts, proj_week_starts)
@@ -111,7 +113,7 @@ def project_cash(bank_actual_pivot):
                     )
                 # If all medians are zero we replicate last year tendencies
                 else:
-                    proj_series = replicate_last_year_transactions(s_hist)
+                    proj_series = replicate_last_year_transactions(s_hist, proj_week_starts)
 
         if key in proj_bank.index:
             proj_bank.loc[key, proj_week_starts] = proj_series.values

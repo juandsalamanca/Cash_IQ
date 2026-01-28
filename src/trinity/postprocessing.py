@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 
-def get_combined_bank(proj_bank):
+def get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts, cc_payment_alloc):
     # Add CC payment allocation rows to bank cash projections
     if len(cc_payment_alloc):
         # ensure columns match
@@ -35,7 +36,7 @@ def collapse_other(df, keep_index, other_name, index_names):
         keep = pd.concat([keep, other_df], axis=0)
     return keep
 
-def build_inflows_outflows(combined_full):
+def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, idx_names):
     # =========================
     # BUILD INFLOWS/OUTFLOWS PRESENTATION (NO FLAT)
     # =========================
@@ -75,7 +76,7 @@ def build_inflows_outflows(combined_full):
 
     return inflows_present, outflows_present, total_inflows, total_outflows
 
-def get_cash_balance(total_inflows, total_outflows, beginning_cash_balance):
+def get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts):
     # =========================
     # BEGIN/END CASH BALANCE
     # =========================
@@ -93,7 +94,7 @@ def get_cash_balance(total_inflows, total_outflows, beginning_cash_balance):
 
     
 
-def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_alloc):
+def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_alloc, all_week_starts, proj_week_starts):
     # =========================
     # CC OUTPUT SHEETS:
     #   - CC Spend Transactions (all CC spend rows)
@@ -115,7 +116,7 @@ def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_a
 
     return cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present
 
-def write_outout_excel(inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, OUTPUT_XLSX):
+def write_output_excel(all_week_starts, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX):
     # =========================
     # WRITE OUTPUT EXCEL
     # =========================
@@ -188,6 +189,6 @@ def write_outout_excel(inflows_present, outflows_present, total_inflows, total_o
 
         proj_sheet.to_excel(writer, sheet_name="Projections (Table)", index=False)
 
-    print(f"Saved: {OUTPUT_XLSX.resolve()}")
+    print(f"Saved: {OUTPUT_XLSX}")
     print(f"Projection Week 1 starts: {PROJ_WEEK1_START.date()} (Monday)")
 

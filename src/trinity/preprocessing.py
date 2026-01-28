@@ -29,7 +29,7 @@ def load_and_clean_coa(COA_PATH):
     bank_accounts = set(coa.loc[coa["type"].eq("Bank"), "full_name"])
     cc_accounts   = set(coa.loc[coa["type"].eq("Credit Card"), "full_name"])
 
-    return coa
+    return coa, bank_accounts, cc_accounts
 
 # =========================
 # LOAD GL (QB Transaction Detail by Account)
@@ -74,12 +74,6 @@ def load_and_clean_gl(GL_PATH, coa):
 
 def week_windows(date_strt):
 
-    global PROJ_WEEK1_START
-    global N_ACTUAL_WEEKS
-    global N_PROJ_WEEKS
-    global LOOKBACK_WEEKS_LINE_TS
-    global LOOKBACK_MONTHS_CADENCE
-
     PROJ_WEEK1_START = pd.Timestamp(date_strt)   # Monday
     N_ACTUAL_WEEKS   = 4
     N_PROJ_WEEKS     = 13
@@ -87,15 +81,14 @@ def week_windows(date_strt):
     # Lookbacks
     LOOKBACK_WEEKS_LINE_TS = 52     # weekly time-series history
     LOOKBACK_MONTHS_CADENCE = 12    # cadence inference window
-    
-    global actual_week_starts
-    global proj_week_starts
-    global all_week_starts
-    global hist_week_starts
-    global cadence_start
-    global cadence_end
-    global proj_end_date
-    
+    CC_MIX_ROLLING_WEEKS    = 8     # rolling window for allocating CC payment categories
+    CC_SPEND_TS_WEEKS       = 26
+
+    # Output controls
+    TOP_N_INFLOW_LINES  = 30
+    TOP_N_OUTFLOW_LINES = 60
+    TOP_N_CC_CATS       = 40
+
     actual_week_starts = pd.date_range(
         start=PROJ_WEEK1_START - pd.Timedelta(weeks=N_ACTUAL_WEEKS),
         periods=N_ACTUAL_WEEKS,
@@ -117,5 +110,9 @@ def week_windows(date_strt):
 
     cadence_start = (PROJ_WEEK1_START - pd.DateOffset(months=LOOKBACK_MONTHS_CADENCE)).normalize()
     cadence_end   = (PROJ_WEEK1_START - pd.Timedelta(days=1)).normalize()
-    proj_end_date = (proj_week_starts[-1] + pd.Timedelta(days=7)) 
+    proj_end_date = (proj_week_starts[-1] + pd.Timedelta(days=7))
+    
+    return (PROJ_WEEK1_START, CC_MIX_ROLLING_WEEKS, CC_SPEND_TS_WEEKS, TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, 
+            TOP_N_CC_CATS, actual_week_starts, proj_week_starts, all_week_starts, hist_week_starts, cadence_start, 
+            cadence_end, proj_end_date)
 
