@@ -2,8 +2,14 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 import json
+import os
+import streamlit as st
 
 load_dotenv()
+
+if os.getenv("OPENAI_API_KEY") is None:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
 
 class InflowsFormat(BaseModel):
     collected: list[str]
