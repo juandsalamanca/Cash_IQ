@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from src.trinity.classify_transactions import classify_inflows, classify_outflows
 
 def get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts, cc_payment_alloc):
     # Add CC payment allocation rows to bank cash projections
@@ -116,7 +119,9 @@ def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_a
 
     return cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present
 
-def write_output_excel(all_week_starts, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX):
+
+
+def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX):
     # =========================
     # WRITE OUTPUT EXCEL
     # =========================
@@ -148,19 +153,32 @@ def write_output_excel(all_week_starts, inflows_present, outflows_present, total
         rows = []
         rows.append(("Beginning Bank Balance", "", ""))
         rows.append(("Cash Inflows", "", ""))
-        for (acct, typ, det) in inflows_present.index:
-            rows.append(("", acct, ""))
+        inflow_section_indexes = []
+        for inflow_cat in inflows_by_cat:
+            rows.append(("", inflow_cat, ""))
+            inflow_section_indexes.append(len(rows)+1)
+            for acct in sorted(inflows_by_cat[inflow_cat]):
+                rows.append(("", "", acct))
+
+            rows.append(("", "", ""))
 
         rows.append(("Total Cash Inflows", "", ""))
-
+        inflow_section_indexes.append(len(rows)+1)
         rows.append(("Cash Outflows", "", ""))
-        for (acct, typ, det) in outflows_present.index:
-            rows.append(("", acct, ""))
+        outflow_section_indexes = []
+        for outflow_cat in outflows_by_cat:
+            rows.append(("", outflow_cat, ""))
+            outflow_section_indexes.append(len(rows)+1)
+            for acct in sorted(outflows_by_cat[outflow_cat]):
+                rows.append(("", "", acct))
+
+            rows.append(("", "", ""))
 
         rows.append(("Total Cash Outflows", "", ""))
+        outflow_section_indexes.append(len(rows)+1)
         rows.append(("Ending Bank Balance", "", ""))
 
-        proj_sheet = pd.DataFrame(rows, columns=["Section","Line Item","Notes"])
+        proj_sheet = pd.DataFrame(rows, columns=["Section","Notes","Line Item"])
         for w in all_week_starts:
             proj_sheet[w.strftime("%Y-%m-%d")] = np.nan
 
@@ -184,11 +202,37 @@ def write_output_excel(all_week_starts, inflows_present, outflows_present, total
             put_row_value("", acct, row)
 
         # Switch the Notes and Line item columns for the projections sheet
-        proj_sheet[['Line Item', 'Notes']] = proj_sheet[['Notes', 'Line Item']].values
-        proj_sheet = proj_sheet.rename(columns={'Line Item':'Notes','Notes':'Line Item'})
+        #proj_sheet[['Line Item', 'Notes']] = proj_sheet[['Notes', 'Line Item']].values
+        #proj_sheet = proj_sheet.rename(columns={'Line Item':'Notes','Notes':'Line Item'})
 
         proj_sheet.to_excel(writer, sheet_name="Projections (Table)", index=False)
 
-    print(f"Saved: {OUTPUT_XLSX}")
-    print(f"Projection Week 1 starts: {PROJ_WEEK1_START.date()} (Monday)")
+        print(f"Saved: {OUTPUT_XLSX}")
+        print(f"Projection Week 1 starts: {PROJ_WEEK1_START.date()} (Monday)")
 
+    return inflow_section_indexes, outflow_section_indexes
+
+
+def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes):
+
+    wb = load_workbook(OUTPUT_XLSX, data_only=True)
+    ws = wb["Projections (Table)"]
+
+    for section_indexes in [inflow_section_indexes, outflow_section_indexes]:
+    
+        for i in range(len(section_indexes)):
+            idx = section_indexes[i]
+            if idx == section_indexes[-1]:
+                break
+            
+            next_idx = section_indexes[i+1]
+            
+            row = ws[idx]
+            for col in range(3, len(row)):
+                col_letter = get_column_letter(col+1)
+                if next_idx-2 >= idx+1:
+                    row[col].value = f'=SUM({col_letter}{idx+1}:{col_letter}{next_idx-2})'
+                else:
+                    row[col].value = 0.0
+
+    wb.save(OUTPUT_XLSX)

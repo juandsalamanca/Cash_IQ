@@ -2,8 +2,11 @@ from src.trinity.styling import style_projections
 from src.trinity.preprocessing import week_windows, load_and_clean_coa, load_and_clean_gl
 from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
-from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel
+from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel, calculate_category_totals
+from src.trinity.classify_transactions import get_calssifications
 import streamlit as st
+
+
 
 @st.cache_data
 def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX):
@@ -35,10 +38,15 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX):
     inflows_present, outflows_present, total_inflows, total_outflows = build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, 
                                                                                               TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, idx_names)
     beg_bal_series, end_bal_series = get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts)
-    cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present = get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_alloc, all_week_starts, proj_week_starts)
-    write_output_excel(all_week_starts, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, 
-                       cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, 
-                       beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX)
+    cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present = get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, 
+                                                                                                    cc_payment_alloc, all_week_starts, proj_week_starts)
+    inflows_by_cat, outflows_by_cat = get_calssifications(inflows_present, outflows_present)
+    inflow_section_indexes, outflow_section_indexes = write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
+                       total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
+                       cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX)
+    
+    calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes)
+    
     style_projections(OUTPUT_XLSX)
 
     with open(OUTPUT_XLSX, "rb") as f:
