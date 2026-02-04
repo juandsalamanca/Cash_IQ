@@ -41,13 +41,13 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX):
     cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present = get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, 
                                                                                                     cc_payment_alloc, all_week_starts, proj_week_starts)
     inflows_by_cat, outflows_by_cat = get_calssifications(inflows_present, outflows_present)
-    inflow_section_indexes, outflow_section_indexes = write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
+    inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
                        cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX)
     
-    calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes)
+    calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
     
-    style_projections(OUTPUT_XLSX)
+    style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
 
     with open(OUTPUT_XLSX, "rb") as f:
         return f.read()
