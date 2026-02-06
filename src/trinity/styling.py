@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.formatting.rule import FormulaRule
 
 def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes):
 
@@ -33,8 +34,9 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
                 cell.number_format = accounting_format
 
     # Header fill
-    for cell in ws[1]:
-        cell.fill = header_fill
+    for i in range(1, 3):
+        for cell in ws[i]:
+            cell.fill = header_fill
 
     # Category fill
     category_fill = PatternFill(
@@ -43,8 +45,15 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
         fill_type="solid"
     )
 
+    # Projection fill
+    projection_fill = PatternFill(
+        start_color="53C9B8",
+        end_color="53C9B8",
+        fill_type="solid"
+    )
+
     for section_indexes in [inflow_section_indexes, outflow_section_indexes]:
-        
+
         for i in range(len(section_indexes)):
             idx = section_indexes[i]
             row = ws[idx]
@@ -54,8 +63,16 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
                 start = 0
             else:
                 start = 1
-            for i in range(start, len(row)):
-                row[i].fill = category_fill
+            # Color categories with grey
+            for j in range(start, len(row)):
+                row[j].fill = category_fill
+
+            # Color categories with tiel
+            if i != len(section_indexes)-1:
+                for idx in range(section_indexes[i]+1, section_indexes[i+1]):
+                    row = ws[idx]
+                    for j in range(7, len(row)):
+                        row[j].fill = projection_fill
 
     # Apply color to bag end cash
     beg_cash_row_idx = cash_balance_indexes[0]
@@ -67,5 +84,29 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
         beg_row[col].fill = header_fill
         end_row[col].fill = header_fill
 
+    # Add conditional formatting to end balance
+    conditional_font_color = Font(color="9C0006")
+    conditional_fill = PatternFill(
+        start_color="FFC7CE",
+        end_color="FFC7CE",
+        fill_type="solid"
+    )
+
+    header_rows = 1
+
+    rule = FormulaRule(
+        formula=[f"H{end_cash_row_idx+header_rows}<D{header_rows}"],
+        font=conditional_font_color,
+        fill=conditional_fill
+        )
+
+    ws.conditional_formatting.add(f"H{end_cash_row_idx+header_rows}:T{end_cash_row_idx+header_rows}", rule)
+
+    # Add the cash floor row
+    for n in range(header_rows):
+        ws.insert_rows(1)
+
+    ws[1][2].value = "Cash Floor"
+    ws[1][3].value = 0
 
     wb.save(OUTPUT_XLSX)

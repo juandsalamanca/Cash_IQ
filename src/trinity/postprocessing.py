@@ -151,6 +151,7 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
 
         # Template-style table
         rows = []
+        rows.append(("Week Number", "", ""))
         rows.append(("", "", ""))
         cash_balance_indexes = []
         rows.append(("Beginning Bank Balance", "", ""))
@@ -179,6 +180,7 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
 
         rows.append(("Total Cash Outflows", "", ""))
         outflow_section_indexes.append(len(rows)+1)
+        rows.append(("", "", ""))
         rows.append(("Ending Bank Balance", "", ""))
         cash_balance_indexes.append(len(rows)+1)
 
@@ -192,8 +194,15 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
             if len(idx):
                 i = idx[0]
                 for w in all_week_starts:
-                    proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
+                    if isinstance(values[w], int) or isinstance(values[w], float):
+                        proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
+                    elif isinstance(values[w], str):
+                        proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = values[w]
 
+        week_numbers = [""]*4 + [f"Week {n+1}" for n in range(13)]
+        week_number_series = pd.Series(week_numbers, index=all_week_starts)
+
+        put_row_value("Week Number","", week_number_series)
         put_row_value("Beginning Bank Balance","", beg_bal_series)
         put_row_value("Ending Bank Balance","", end_bal_series)
         put_row_value("Total Cash Inflows","", total_inflows)
@@ -219,6 +228,7 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
 
 def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes):
 
+    header_rows = 1
     wb = load_workbook(OUTPUT_XLSX, data_only=True)
     ws = wb["Projections (Table)"]
 
@@ -232,19 +242,19 @@ def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_secti
             operation = 'SUM'
         else:
             operation = '-SUM'
-    
+
         for i in range(len(section_indexes)):
             idx = section_indexes[i]
             if idx == section_indexes[-1]:
                 break
-            
+
             next_idx = section_indexes[i+1]
-            
+
             row = ws[idx]
             for col in range(3, len(row)):
                 col_letter = get_column_letter(col+1)
                 if next_idx-2 >= idx+1:
-                    row[col].value = f'={operation}({col_letter}{idx+1}:{col_letter}{next_idx-2})'
+                    row[col].value = f'={operation}({col_letter}{idx+1+header_rows}:{col_letter}{next_idx-2+header_rows})'
                 else:
                     row[col].value = 0.0
 
@@ -261,7 +271,7 @@ def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_secti
         # Total Inflows
         inflows_sum_String =  f'='
         for i in range(len(inflow_section_indexes)-1):
-            inflows_sum_String += f'{col_letter}{inflow_section_indexes[i]}+'
+            inflows_sum_String += f'{col_letter}{inflow_section_indexes[i]+header_rows}+'
         inflows_sum_String = inflows_sum_String.rstrip('+')
         row = ws[total_inflows_row_idx]
         row[col].value = inflows_sum_String
@@ -269,7 +279,7 @@ def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_secti
         # Total Outflows
         outflows_sum_String =  f'='
         for i in range(len(outflow_section_indexes)-1):
-            outflows_sum_String += f'{col_letter}{outflow_section_indexes[i]}+'
+            outflows_sum_String += f'{col_letter}{outflow_section_indexes[i]+header_rows}+'
         outflows_sum_String = outflows_sum_String.rstrip('+')
         row = ws[total_outflows_row_idx]
         row[col].value = outflows_sum_String
@@ -290,12 +300,12 @@ def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_secti
     for col in range(3, 7):
         col_letter = get_column_letter(col+1)
         next_col_letter = get_column_letter(col+2)
-        
+
         # End balance is just the beg balanace from teh next column
-        end_row[col].value = f'={next_col_letter}{beg_cash_row_idx}'
+        end_row[col].value = f'={next_col_letter}{beg_cash_row_idx+header_rows}'
 
         # Beg balaance is end balaance - inflows - outflows (already negative)
-        beg_row[col].value = f'={col_letter}{end_cash_row_idx}-{col_letter}{total_outflows_row_idx}-{col_letter}{total_inflows_row_idx}'
+        beg_row[col].value = f'={col_letter}{end_cash_row_idx+header_rows}-{col_letter}{total_outflows_row_idx+header_rows}-{col_letter}{total_inflows_row_idx+header_rows}'
 
     for col in range(7, ws.max_column):
         col_letter = get_column_letter(col+1)
@@ -305,10 +315,10 @@ def calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_secti
         if col == 7:
             pass
         else:
-            beg_row[col].value = f'={prev_col_letter}{end_cash_row_idx}'
+            beg_row[col].value = f'={prev_col_letter}{end_cash_row_idx+header_rows}'
 
         # End balance is beg balance + inflows + outflows (already negative)
-        end_row[col].value = f'={col_letter}{beg_cash_row_idx}+{col_letter}{total_inflows_row_idx}+{col_letter}{total_outflows_row_idx}'
+        end_row[col].value = f'={col_letter}{beg_cash_row_idx+header_rows}+{col_letter}{total_inflows_row_idx+header_rows}+{col_letter}{total_outflows_row_idx+header_rows}'
 
-        
+
     wb.save(OUTPUT_XLSX)
