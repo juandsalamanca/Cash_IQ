@@ -4,12 +4,13 @@ from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
 from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel, calculate_category_totals
 from src.trinity.classify_transactions import get_calssifications
+from src.trinity.retroactive_comparison import compare_reports
 import streamlit as st
 
 
 
 @st.cache_data
-def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX):
+def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_path):
 
     # TODO: Need to pass all the global vars properly as params through the functions
     # First initialize the DFs and vars we need
@@ -45,9 +46,12 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX):
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
                        cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX)
     
-    calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
-    
     style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
+
+    TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
+
+    if previous_cashiq_path is not None:
+        compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX)
 
     with open(OUTPUT_XLSX, "rb") as f:
         return f.read()

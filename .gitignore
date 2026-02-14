@@ -1,6 +1,7 @@
 # Files
 .env
 output.xlsx
+output_temp.xlsx
 
 # Folders
 __pycache__/

@@ -7,6 +7,8 @@ cachetools==6.2.4
 certifi==2026.1.4
 charset-normalizer==3.4.4
 click==8.3.1
+cssselect==1.4.0
+cssutils==2.11.1
 distro==1.9.0
 et_xmlfile==2.0.0
 gitdb==4.0.12
@@ -20,7 +22,9 @@ Jinja2==3.1.6
 jiter==0.12.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+lxml==6.0.2
 MarkupSafe==3.0.3
+more-itertools==10.8.0
 narwhals==2.15.0
 numpy==2.4.1
 openai==2.16.0
@@ -29,6 +33,7 @@ packaging==26.0
 pandas==2.3.3
 pillow==12.1.0
 pluggy==1.6.0
+premailer==3.10.0
 protobuf==6.33.4
 pyarrow==23.0.0
 pydantic==2.12.5
@@ -54,3 +59,4 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
 urllib3==2.6.3
+yagmail==0.15.293

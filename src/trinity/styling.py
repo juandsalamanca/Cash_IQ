@@ -4,6 +4,8 @@ from openpyxl.formatting.rule import FormulaRule
 
 def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes):
 
+    header_rows = 1
+
     wb = load_workbook(OUTPUT_XLSX)
 
     # Define styles
@@ -91,9 +93,6 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
         end_color="FFC7CE",
         fill_type="solid"
     )
-
-    header_rows = 1
-
     rule = FormulaRule(
         formula=[f"H{end_cash_row_idx+header_rows}<D{header_rows}"],
         font=conditional_font_color,

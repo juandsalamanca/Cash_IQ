@@ -19,6 +19,10 @@ gl_file = st.file_uploader(
     "Upload GL file", type=["xlsx", "xls"]
 )
 
+previous_cashiq_file = st.file_uploader(
+    "Upload previous Cash IQ file", type=["xlsx", "xls"]
+)
+
 date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
 projection_function = client_map[client]
 
@@ -31,8 +35,7 @@ if process:
 
     else:
 
-        excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx")
-
+        excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx", previous_cashiq_path=previous_cashiq_file)
 
         st.download_button(
             label="Download Excel",
