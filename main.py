@@ -1,20 +1,27 @@
 import streamlit as st
 from src.trinity.main_process import get_trinity_cash_iq
+from src.parisi.main_process import get_parisi_cash_iq
 
 
 st.header("Cash IQ")
 
-client = st.selectbox("Select the client", ["Trinity", "Luna"])
+client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna"])
 
 client_map = {
     "Trinity": get_trinity_cash_iq,
+    "Parisi": get_parisi_cash_iq,
     "Luna": "luna"
     }
 
-coa_file = st.file_uploader(
-    "Upload COA file", type=["xlsx", "xls"]
-)
+coa_file = None
+previous_cashiq_file = None
 
+if client == "Trinity":
+
+    coa_file = st.file_uploader(
+        "Upload COA file", type=["xlsx", "xls"]
+    )
+    
 gl_file = st.file_uploader(
     "Upload GL file", type=["xlsx", "xls"]
 )
@@ -26,11 +33,16 @@ previous_cashiq_file = st.file_uploader(
 date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
 projection_function = client_map[client]
 
+if client == "Parisi":
+    condition = gl_file and date_strt
+elif client == "Trinity":
+    condition = coa_file and gl_file and date_strt
+
 process = st.button("Process")
 
 if process:
 
-    if not(coa_file and gl_file and date_strt):
+    if not(condition):
         st.error("Please upload all required files and select a date.")
 
     else:

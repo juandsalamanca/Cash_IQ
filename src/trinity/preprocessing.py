@@ -3,7 +3,6 @@ import pandas as pd
 def safe_strip(s):
     return s.astype(str).str.strip()
 
-
 def to_numeric(series):
     return pd.to_numeric(series, errors="coerce")
 
