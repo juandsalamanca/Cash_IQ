@@ -48,11 +48,15 @@ if process:
     else:
 
         excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx", previous_cashiq_path=previous_cashiq_file)
-
+        if client == "Trinity":
+             f_name = f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx"
+        elif client == "Parisi":
+            f_name = f"Parisi_Speed_School_{date_strt}.xlsx"
+            
         st.download_button(
             label="Download Excel",
             data=excel_bytes,
-            file_name=f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx",
+            file_name=f_name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             icon=":material/download:",
         )
