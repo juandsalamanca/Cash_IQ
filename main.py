@@ -5,12 +5,19 @@ from src.parisi.main_process import get_parisi_cash_iq
 
 st.header("Cash IQ")
 
-client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna"])
+client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "SupafitGrow", "Gamechanger"])
+
+if client == "Luna":
+    st.warning("Luna's Cash IQ is currently under development. Please check back later.")
+    st.stop()
 
 client_map = {
     "Trinity": get_trinity_cash_iq,
     "Parisi": get_parisi_cash_iq,
-    "Luna": "luna"
+    "Luna": "luna",
+    "Strivewell": get_trinity_cash_iq,
+    "SupafitGrow": get_trinity_cash_iq,
+    "Gamechanger": get_trinity_cash_iq
     }
 
 coa_file = None
@@ -18,7 +25,7 @@ previous_cashiq_file = None
 
 initial_cash_balance = st.number_input("Enter initial cash balance", min_value=0.0)
 
-if client == "Trinity":
+if client in ["Trinity", "Strivewell", "SupafitGrow", "Gamechanger"]:
 
     coa_file = st.file_uploader(
         "Upload COA file", type=["xlsx", "xls"]
@@ -54,6 +61,8 @@ if process:
              f_name = f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx"
         elif client == "Parisi":
             f_name = f"Parisi_Speed_School_{date_strt}.xlsx"
+        else:
+            f_name = f"{client}_Cash_IQ_{date_strt}.xlsx"
             
         st.download_button(
             label="Download Excel",

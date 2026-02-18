@@ -2,7 +2,8 @@ from src.styling import style_projections
 from src.trinity.preprocessing import week_windows, load_and_clean_coa, load_and_clean_gl
 from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
-from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel, calculate_category_totals
+from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel
+from src.general_postprocessing import calculate_category_totals
 from src.classify_transactions import get_classifications
 from src.retroactive_comparison import compare_reports
 import streamlit as st
