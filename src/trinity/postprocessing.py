@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
-from src.trinity.classify_transactions import classify_inflows, classify_outflows
+from src.projections import build_projections_table
 
 def get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts, cc_payment_alloc):
     # Add CC payment allocation rows to bank cash projections
@@ -121,7 +121,7 @@ def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_a
 
 
 
-def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX):
+def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, week1_cash_balance=0.0):
     # =========================
     # WRITE OUTPUT EXCEL
     # =========================
@@ -149,74 +149,7 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
         cc_payment_schedule.to_excel(writer, sheet_name="CC Payments - Schedule", index=False)
         cc_payment_alloc_present.reset_index().to_excel(writer, sheet_name="Cash - CC Pay Allocation", index=False)
 
-        # Template-style table
-        rows = []
-        rows.append(("Week Number", "", ""))
-        rows.append(("", "", ""))
-        cash_balance_indexes = []
-        rows.append(("Beginning Bank Balance", "", ""))
-        cash_balance_indexes.append(len(rows)+1)
-        rows.append(("Cash Inflows", "", ""))
-        inflow_section_indexes = []
-        for inflow_cat in inflows_by_cat:
-            rows.append(("", inflow_cat, ""))
-            inflow_section_indexes.append(len(rows)+1)
-            for acct in sorted(inflows_by_cat[inflow_cat]):
-                rows.append(("", "", acct))
-
-            rows.append(("", "", ""))
-
-        rows.append(("Total Cash Inflows", "", ""))
-        inflow_section_indexes.append(len(rows)+1)
-        rows.append(("Cash Outflows", "", ""))
-        outflow_section_indexes = []
-        for outflow_cat in outflows_by_cat:
-            rows.append(("", outflow_cat, ""))
-            outflow_section_indexes.append(len(rows)+1)
-            for acct in sorted(outflows_by_cat[outflow_cat]):
-                rows.append(("", "", acct))
-
-            rows.append(("", "", ""))
-
-        rows.append(("Total Cash Outflows", "", ""))
-        outflow_section_indexes.append(len(rows)+1)
-        rows.append(("", "", ""))
-        rows.append(("Ending Bank Balance", "", ""))
-        cash_balance_indexes.append(len(rows)+1)
-
-        proj_sheet = pd.DataFrame(rows, columns=["Section","Notes","Line Item"])
-        for w in all_week_starts:
-            proj_sheet[w.strftime("%Y-%m-%d")] = np.nan
-
-        def put_row_value(section, acct, values):
-            mask = (proj_sheet["Section"].eq(section)) & (proj_sheet["Line Item"].eq(acct))
-            idx = proj_sheet.index[mask]
-            if len(idx):
-                i = idx[0]
-                for w in all_week_starts:
-                    if isinstance(values[w], int) or isinstance(values[w], float):
-                        proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
-                    elif isinstance(values[w], str):
-                        proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = values[w]
-
-        week_numbers = [""]*4 + [f"Week {n+1}" for n in range(13)]
-        week_number_series = pd.Series(week_numbers, index=all_week_starts)
-
-        put_row_value("Week Number","", week_number_series)
-        put_row_value("Beginning Bank Balance","", beg_bal_series)
-        put_row_value("Ending Bank Balance","", end_bal_series)
-        put_row_value("Total Cash Inflows","", total_inflows)
-        put_row_value("Total Cash Outflows","", total_outflows)
-
-        for (acct, typ, det), row in inflows_present.iterrows():
-            put_row_value("", acct, row)
-
-        for (acct, typ, det), row in outflows_present.iterrows():
-            put_row_value("", acct, row)
-
-        # Switch the Notes and Line item columns for the projections sheet
-        #proj_sheet[['Line Item', 'Notes']] = proj_sheet[['Notes', 'Line Item']].values
-        #proj_sheet = proj_sheet.rename(columns={'Line Item':'Notes','Notes':'Line Item'})
+        proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, beg_bal_series, end_bal_series, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance)
 
         proj_sheet.to_excel(writer, sheet_name="Projections (Table)", index=False)
 

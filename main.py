@@ -16,6 +16,8 @@ client_map = {
 coa_file = None
 previous_cashiq_file = None
 
+initial_cash_balance = st.number_input("Enter initial cash balance", min_value=0.0)
+
 if client == "Trinity":
 
     coa_file = st.file_uploader(
@@ -47,7 +49,7 @@ if process:
 
     else:
 
-        excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx", previous_cashiq_path=previous_cashiq_file)
+        excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX="output.xlsx", previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance)
         if client == "Trinity":
              f_name = f"Grace_Global_13_Week_Cashflow_{date_strt}.xlsx"
         elif client == "Parisi":

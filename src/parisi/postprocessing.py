@@ -38,7 +38,7 @@ def build_inflows_outflows(combined, actual_starts, TOP_N_INFLOW_LINES, TOP_N_OU
     return inflows_present, outflows_present, total_inflows, total_outflows
 
 
-def write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_cash_balance, total_inflows, total_outflows, inflows_present, outflows_present, acct_info, cash_tx, OUTPUT_XLSX):
+def write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_cash_balance, total_inflows, total_outflows, inflows_present, outflows_present, acct_info, cash_tx, OUTPUT_XLSX, week1_cash_balance=0.0):
     
     # Balances
     beg_bal = pd.Series(index=all_starts, dtype=float)
@@ -58,7 +58,7 @@ def write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_ca
         "Ending Bank Balance": [end_bal[w] for w in all_starts],
     })
 
-    proj_table = build_projections_table(all_starts, inflows_by_cat, outflows_by_cat, beg_bal, end_bal, total_inflows, total_outflows, inflows_present, outflows_present)
+    proj_table, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = build_projections_table(all_starts, inflows_by_cat, outflows_by_cat, beg_bal, end_bal, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance)
 
     with pd.ExcelWriter(OUTPUT_XLSX, engine="openpyxl") as writer:
         summary.to_excel(writer, sheet_name="Summary", index=False)
@@ -67,3 +67,5 @@ def write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_ca
         outflows_present.reset_index().to_excel(writer, sheet_name="Cash Outflows (Detail)", index=False)
         acct_info.to_excel(writer, sheet_name="Detected Bank Accounts", index=False)
         cash_tx.sort_values(["account_name","date"]).to_excel(writer, sheet_name="Cash Tx (Bank Only)", index=False)
+
+    return inflow_section_indexes, outflow_section_indexes, cash_balance_indexes

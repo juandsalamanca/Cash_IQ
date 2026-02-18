@@ -73,9 +73,7 @@ def learn_from_previopus_cashiq(previous_cashiq_path, OUTPUT_XLSX):
         col = adjustment["column"]
         val = adjustment["value"]
         for i in range(1, new_ws.max_row+1):
-            print(f"New category: {new_ws[i][2].value}")
             if new_ws[i][2].value == category:
-                print(f"Applying adjustment for category {category} at row {i}, column {col} with value {val}")
                 new_ws[i][col-2].value = val
         
     new_wb.save(OUTPUT_XLSX)

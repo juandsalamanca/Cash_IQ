@@ -8,6 +8,12 @@ def week_of_month(dt: pd.Timestamp) -> int:
 def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
+def allocate_to_weeks(dates, amounts, week_starts):
+    s = pd.Series(amounts, index=pd.to_datetime(dates))
+    wk = monday_week_start(s.index.to_series())
+    out = s.groupby(wk).sum()
+    return out.reindex(week_starts, fill_value=0.0)
+
 def project_weekly_pattern(series_hist, proj_weeks):
     """
     Project a weekly-flow line:
@@ -185,7 +191,7 @@ def replicate_last_year_transactions(s_hist, proj_week_starts):
     proj_series = pd.Series(projection_list, index=proj_week_starts)
     return proj_series
 
-def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, beg_bal_series, end_bal_series, total_inflows, total_outflows, inflows_present, outflows_present):
+def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, beg_bal_series, end_bal_series, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance=0.0):
     # Template-style table
     rows = []
     rows.append(("Week Number", "", ""))
@@ -234,22 +240,16 @@ def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, be
                 if isinstance(values[w], int) or isinstance(values[w], float):
                     proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
                 elif isinstance(values[w], str):
-                    print(i)
-                    print(w)
-                    print(values[w])
+       
                     proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = values[w]
 
     week_numbers = [""]*4 + [f"Week {n+1}" for n in range(13)]
     week_number_series = pd.Series(week_numbers, index=all_week_starts)
-    print(proj_sheet.head())
     put_row_value("Week Number","", week_number_series)
-    print("Week number series:", week_number_series)
-    print(proj_sheet.head())
     put_row_value("Beginning Bank Balance","", beg_bal_series)
     put_row_value("Ending Bank Balance","", end_bal_series)
     put_row_value("Total Cash Inflows","", total_inflows)
     put_row_value("Total Cash Outflows","", total_outflows)
-    print(proj_sheet.head())
 
     for index, row in inflows_present.iterrows():
         if len(index) == 3:
@@ -257,13 +257,14 @@ def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, be
         else:
             acct = index
         put_row_value("", acct, row)
-    print(proj_sheet.head())
     for index, row in outflows_present.iterrows():
         if len(index) == 3:
             acct = index[0]
         else:
             acct = index
         put_row_value("", acct, row)
-    print(proj_sheet.head())
+
+    print("Setting week1 cash to :", week1_cash_balance)
+    proj_sheet.iloc[2,7] = week1_cash_balance
     
-    return proj_sheet
+    return proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes

@@ -1,16 +1,16 @@
-from src.trinity.styling import style_projections
+from src.styling import style_projections
 from src.trinity.preprocessing import week_windows, load_and_clean_coa, load_and_clean_gl
 from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
 from src.trinity.postprocessing import get_combined_bank, build_inflows_outflows, get_cash_balance, get_cc_output_sheets, write_output_excel, calculate_category_totals
-from src.trinity.classify_transactions import get_calssifications
-from src.trinity.retroactive_comparison import compare_reports
+from src.classify_transactions import get_classifications
+from src.retroactive_comparison import compare_reports
 import streamlit as st
 
 
 
 @st.cache_data
-def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_path):
+def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_path, initial_cash_balance=0.0):
 
     # TODO: Need to pass all the global vars properly as params through the functions
     # First initialize the DFs and vars we need
@@ -41,10 +41,10 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
     beg_bal_series, end_bal_series = get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts)
     cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present = get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, 
                                                                                                     cc_payment_alloc, all_week_starts, proj_week_starts)
-    inflows_by_cat, outflows_by_cat = get_calssifications(inflows_present, outflows_present)
+    inflows_by_cat, outflows_by_cat = get_classifications("trinity", inflows_present, outflows_present)
     inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
-                       cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX)
+                       cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)
     
     style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
 

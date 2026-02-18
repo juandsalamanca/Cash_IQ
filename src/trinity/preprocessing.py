@@ -1,14 +1,5 @@
 import pandas as pd
-
-def safe_strip(s):
-    return s.astype(str).str.strip()
-
-def to_numeric(series):
-    return pd.to_numeric(series, errors="coerce")
-
-def monday_week_start(d: pd.Series) -> pd.Series:
-    d = pd.to_datetime(d)
-    return d - pd.to_timedelta(d.dt.weekday, unit="D")
+from src.general_preprocessing import safe_strip, to_numeric, monday_week_start
 
 
 # =========================
