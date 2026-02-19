@@ -1,6 +1,7 @@
 import streamlit as st
 from src.trinity.main_process import get_trinity_cash_iq
 from src.parisi.main_process import get_parisi_cash_iq
+from src.strivewell.main_process import get_strivewell_cash_iq
 from src.ai_summary import get_summary
 
 if "excel_bytes" not in st.session_state:
@@ -19,7 +20,7 @@ client_map = {
     "Trinity": get_trinity_cash_iq,
     "Parisi": get_parisi_cash_iq,
     "Luna": "luna",
-    "Strivewell": get_trinity_cash_iq,
+    "Strivewell": get_strivewell_cash_iq,
     "SupafitGrow": get_trinity_cash_iq,
     "Gamechanger": get_trinity_cash_iq
     }
@@ -48,7 +49,7 @@ projection_function = client_map[client]
 
 if client == "Parisi":
     condition = gl_file and date_strt
-elif client == "Trinity":
+elif client in ["Trinity", "Strivewell"]:
     condition = coa_file and gl_file and date_strt
 
 process = st.button("Process")
@@ -84,14 +85,13 @@ if st.session_state.excel_bytes is not None:
     summary_button = st.button("Get summary")
     if summary_button:
         st.session_state.summary = get_summary(date_strt, output_file_name)
-        st.subheader("Summary of Cash Flow Projections")
 
     if st.session_state.summary:
-
+        st.write("Summary done")
         st.download_button(
-        label="Download Summary",
-        data=st.session_state.summary,
-        file_name="summary.txt",
-        mime="text/plain",
-        icon=":material/download:",
-        )
+            label="Download Summary",
+            data=st.session_state.summary,
+            file_name="summary.txt",
+            mime="text/plain",
+            icon=":material/download:",
+            )
