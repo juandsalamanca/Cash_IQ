@@ -264,7 +264,6 @@ def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, be
             acct = index
         put_row_value("", acct, row)
 
-    print("Setting week1 cash to :", week1_cash_balance)
     proj_sheet.iloc[2,7] = week1_cash_balance
     
     return proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes
