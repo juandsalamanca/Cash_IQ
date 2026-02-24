@@ -42,7 +42,6 @@ def classify_transactions(transaction_list, transaction_type, categories, key_ma
     Categories:
     {categories}
 
-    Provide the classification in the format: Category - List of {transaction_type}
     """
 
     response = client.responses.parse(

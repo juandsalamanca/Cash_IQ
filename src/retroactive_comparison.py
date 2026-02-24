@@ -49,12 +49,10 @@ def get_mismatches(simplified_previous_cashiq_df, simplified_new_cashiq):
     return mismatches
 
 
-def learn_from_previopus_cashiq(previous_cashiq_path, OUTPUT_XLSX):
+def learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX):
 
     old_wb = load_workbook(previous_cashiq_path)
-
-    sheet_name = "Projections"
-    ws = old_wb[sheet_name]
+    ws = old_wb.active
     allowed_colors = ['FFF2977E', '00000000', 'FF53C9B8', 'FFFFFF00', 'FFA3A5D0', 'FFBFBFBF']
     adjustments = []
     for i in range(1, ws.max_row+1):
@@ -92,4 +90,4 @@ def compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX):
     with pd.ExcelWriter(OUTPUT_XLSX, engine="openpyxl", mode="a", if_sheet_exists="new") as writer:
         mismatch_df.to_excel(writer, sheet_name="Mismatches", index=False)
 
-    learn_from_previopus_cashiq(previous_cashiq_path, OUTPUT_XLSX)
+    learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX)
