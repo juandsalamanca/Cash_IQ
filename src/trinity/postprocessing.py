@@ -64,8 +64,35 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
         .index
     )
 
-    inflows_tbl = combined_full.loc[inflow_mask, all_week_starts].copy()
-    outflows_tbl = combined_full.loc[outflow_mask, all_week_starts].copy()
+    in_rows = []
+    out_rows = []
+    cols = combined_full.columns
+    ref = [0 for n in range(len(combined_full.columns))]
+    for i in range(len(combined_full)):
+        in_row = []
+        out_row = []
+        idx  = combined_full.index[i]
+        for j in range(len(combined_full.columns)):
+            value = combined_full.iloc[i, j]
+            if value > 0:
+                in_row.append(value)
+                out_row.append(0)
+            elif value < 0:
+                in_row.append(0)
+                out_row.append(value)
+            else:
+                in_row.append(0)
+                out_row.append(0)
+
+        if in_row != ref:
+            in_rows.append(pd.Series(in_row, index=cols, name=idx))
+        if out_row != ref:
+            out_rows.append(pd.Series(out_row, index=cols, name=idx))
+        
+    inflows_tbl = pd.DataFrame(in_rows, columns=combined_full.columns)
+    inflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
+    outflows_tbl = pd.DataFrame(out_rows, columns=combined_full.columns)
+    outflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
 
     inflows_tbl  = collapse_other(inflows_tbl,  top_inflows,  "Other Inflows",  idx_names)
     outflows_tbl = collapse_other(outflows_tbl, top_outflows, "Other Outflows", idx_names)
