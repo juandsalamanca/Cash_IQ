@@ -33,10 +33,21 @@ def load_and_clean_coa(COA_PATH):
 
 def load_and_clean_gl(GL_PATH, coa):
 
+    gl = pd.read_excel(GL_PATH)
+
+    col_names1 = ["account_section","date","txn_type","num","name"]
+    col_names2 = ["memo","split_account","amount","balance"]
+
+    if "Store" in gl.loc[3].to_list():
+        col_names1 += ["store"]
+    if "Class" in gl.loc[3].to_list():
+        col_names1 += ["class"]
+    col_names = col_names1 + col_names2
+
     gl = pd.read_excel(
         GL_PATH,
         skiprows=4,
-        names=["account_section","date","txn_type","num","name","store","class","memo","split_account","amount","balance"],
+        names=col_names,
     )
 
     gl["account_name"] = gl["account_section"].ffill()

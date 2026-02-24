@@ -44,8 +44,8 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
     # BUILD INFLOWS/OUTFLOWS PRESENTATION (NO FLAT)
     # =========================
     trailing_actual = combined_full[actual_week_starts].copy()
-    inflow_mask  = trailing_actual.sum(axis=1) > 0
-    outflow_mask = trailing_actual.sum(axis=1) < 0
+    inflow_mask  = combined_full.sum(axis=1) > 0
+    outflow_mask = combined_full.sum(axis=1) < 0
 
     # rank lines by trailing magnitude
     top_inflows = (
