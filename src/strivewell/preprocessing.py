@@ -44,6 +44,7 @@ def load_and_clean_gl(GL_PATH, coa):
         col_names1 += ["class"]
     col_names = col_names1 + col_names2
 
+    print(f"GL columns: {col_names}")
     gl = pd.read_excel(
         GL_PATH,
         skiprows=4,
