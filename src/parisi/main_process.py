@@ -25,16 +25,18 @@ def get_parisi_cash_iq(COA_PATH="", GL_PATH="", date_strt="", OUTPUT_XLSX="paris
 
     inflows_by_cat, outflows_by_cat = get_classifications("parisi", inflows_present, outflows_present)
 
-    inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_cash_balance, 
-                                                                                               total_inflows, total_outflows, inflows_present, outflows_present, 
-                                                                                               acct_info, cash_tx, OUTPUT_XLSX, initial_cash_balance)
+    write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_cash_balance, 
+                            total_inflows, total_outflows, inflows_present, outflows_present, 
+                            acct_info, cash_tx, OUTPUT_XLSX, initial_cash_balance)
 
-    style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
-
-    TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes)
+    TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
 
     if previous_cashiq_path is not None:
-        compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX)
+        compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
+
+    style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
+
+    calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
 
     with open(OUTPUT_XLSX, "rb") as f:
         return f.read()

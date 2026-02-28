@@ -1,10 +1,16 @@
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import FormulaRule
+from src.general_postprocessing import get_category_indexes
 
-def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes):
+def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
 
-    header_rows = 1
+    _, cash_balance_indexes, inflow_section_indexes, outflow_section_indexes = get_category_indexes(OUTPUT_XLSX, 
+                                                                                                              inflows_by_cat, 
+                                                                                                              outflows_by_cat, 
+                                                                                                              sheet_name="Projections (Table)")
+
+    header_rows = 2
 
     wb = load_workbook(OUTPUT_XLSX)
 
@@ -15,8 +21,31 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
         raise ValueError(f"Sheet '{sheet_name}' not found")
 
     ws = wb[sheet_name]
+
+    # Add the cash floor row
+    for _ in range(header_rows):
+        ws.insert_rows(1)
+
+    ws[1][0].value = "13 Week Cash Flow Forcast"
+    ws[2][2].value = "Cash Floor"
+    ws[2][3].value = 0
+
+    for idx_list in [inflow_section_indexes, outflow_section_indexes, cash_balance_indexes]:
+        for i in range(len(idx_list)):
+            idx_list[i] = idx_list[i] + header_rows
+
     # Styles
     font_style = Font(name="Aptos Narrow", size=12)
+
+    title_fill = PatternFill(
+        start_color="F2977E",
+        end_color="F2977E",
+        fill_type="solid"
+    )
+
+    for cell in ws[1]:
+        cell.fill = title_fill
+
     header_fill = PatternFill(
         start_color="A3A5D0",
         end_color="A3A5D0",
@@ -36,7 +65,7 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
                 cell.number_format = accounting_format
 
     # Header fill
-    for i in range(1, 3):
+    for i in range(3, 5):
         for cell in ws[i]:
             cell.fill = header_fill
 
@@ -94,18 +123,11 @@ def style_projections(OUTPUT_XLSX, inflow_section_indexes, outflow_section_index
         fill_type="solid"
     )
     rule = FormulaRule(
-        formula=[f"H{end_cash_row_idx+header_rows}<D{header_rows}"],
+        formula=[f"H{end_cash_row_idx}<D{header_rows}"],
         font=conditional_font_color,
         fill=conditional_fill
         )
 
-    ws.conditional_formatting.add(f"H{end_cash_row_idx+header_rows}:T{end_cash_row_idx+header_rows}", rule)
-
-    # Add the cash floor row
-    for n in range(header_rows):
-        ws.insert_rows(1)
-
-    ws[1][2].value = "Cash Floor"
-    ws[1][3].value = 0
+    ws.conditional_formatting.add(f"H{end_cash_row_idx}:T{end_cash_row_idx}", rule)
 
     wb.save(OUTPUT_XLSX)

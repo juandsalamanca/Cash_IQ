@@ -104,6 +104,16 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
     total_inflows  = inflows_present.sum(axis=0)
     total_outflows = outflows_present.sum(axis=0)
 
+    # Account for any empty split account, marked as unmapped
+    inflows_present.index = inflows_present.index.set_levels(
+        ['Unmapped' if level == '' else level for level in inflows_present.index.levels[0]],
+        level=0
+    )
+    outflows_present.index = outflows_present.index.set_levels(
+        ['Unmapped' if level == '' else level for level in outflows_present.index.levels[0]],
+        level=0
+    )
+
     return inflows_present, outflows_present, total_inflows, total_outflows
 
 def get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts):
