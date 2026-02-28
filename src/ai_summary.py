@@ -4,12 +4,18 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
+from docx import Document
+from docx.shared import Pt, RGBColor, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 import streamlit as st
 
 load_dotenv()
 
 if os.getenv("OPENAI_API_KEY") is None:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
+
 
 class InsightSuggestion(BaseModel):
     name: str
@@ -37,14 +43,107 @@ def send_data_to_llm(projection_data, date):
         {"role": "user", "content": prompt}
     ]
 
+    if os.getenv("server") == "qa":
+        model = "gpt-5-mini"
+    else:
+        model = "gpt-5"
+
+    print("Using model:", model)
+
     response = client.responses.parse(
-        model="gpt-5",
+        model=model,
         input=messages,
         text_format=CashIQSummary,
         #reasoning={"effort": "high"}
     )
 
     return response.output_parsed
+
+
+def turn_summary_into_word_doc(summary_json):
+
+    summary_path = "cash_iq_summary.docx"
+
+    doc = Document()
+
+    #--------------------------
+    # Add Title
+    #--------------------------
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Add run (text container)
+    run = p.add_run("CashIQ")
+    run.bold = True
+    run.font.size = Pt(36)
+
+    # Set font to Inter
+    run.font.name = "Inter"
+    run._element.rPr.rFonts.set(qn('w:eastAsia'), "Inter")
+
+    # Set color #298478
+    run.font.color.rgb = RGBColor(0x29, 0x84, 0x78)
+
+    #--------------------------
+    # Add each section
+    #--------------------------
+
+    # Add heaedr
+
+    for section in summary_json:
+
+        # Main headers
+
+        p = doc.add_paragraph()
+
+        run = p.add_run(section)
+        run.bold = True
+        run.font.size = Pt(24)
+        run.font.name = "Inter"
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), "Inter")
+        run.font.color.rgb = RGBColor(0x29, 0x84, 0x78)
+
+        if isinstance(summary_json[section], str):
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.5)
+            run = p.add_run(summary_json[section])
+            run.font.size = Pt(12)
+            run.font.name = "Inter"
+            run._element.rPr.rFonts.set(qn('w:eastAsia'), "Inter")
+
+        # Insights and suggestions
+
+        elif isinstance(summary_json[section], list):
+            for n, insight in enumerate(summary_json[section]):
+                for subsection in insight:
+
+                    # Subsection header
+                    if subsection == "name":
+                        p = doc.add_paragraph()
+                        run = p.add_run(f"{n+1}.{insight[subsection]}")
+                        run.bold = True
+                        run.font.size = Pt(18)
+                        run.font.name = "Inter"
+                        run._element.rPr.rFonts.set(qn('w:eastAsia'), "Inter")
+                        run.font.color.rgb = RGBColor(0x29, 0x84, 0x78)
+
+                    # Subsection content
+                    elif subsection in ["observation", "recommendation"]:
+
+                        spl = insight[subsection].split(". ")
+
+                        for sentence in spl:
+                            bullet_style = doc.styles["List Bullet"]
+                            bullet_style.font.name = "Inter"
+                            bullet_style.font.size = Pt(12)
+                            doc.add_paragraph(sentence, style="List Bullet")
+                            
+
+    doc.save(summary_path)
+
+    return summary_path
+
 
 def get_summary(date, OUTPUT_XLSX):
     # Option 1: records format (most common)
@@ -62,14 +161,17 @@ def get_summary(date, OUTPUT_XLSX):
     }
     summary_json = send_data_to_llm(json.dumps(payload), date).model_dump_json()
     summary_json = json.loads(summary_json)
-    summary_text = ""
-    summary_text += f"Summary:\n {summary_json['summary']}\n\n"
-    for suggestion in summary_json["insights_suggestions"]:
-        summary_text += f"{suggestion["name"]}:\n {suggestion["observation"]}\n {suggestion["recommendation"]}\n\n"
-        #summary_df = pd.DataFrame({"Summary": [summary]})
-    #with pd.ExcelWriter(OUTPUT_XLSX, engine="openpyxl", mode="a", if_sheet_exists="new") as writer:
-    #    summary_df.to_excel(writer, sheet_name="Summary", index=False)
-    return summary_text
+    new_summary_json = {}
+    new_summary_json["Summary"] = summary_json["summary"]
+    new_summary_json["Insights and Suggestions"] = summary_json["insights_suggestions"]
+
+    summary_path = turn_summary_into_word_doc(new_summary_json)
+
+    with open(summary_path, "rb") as f:
+        summary_bytes = f.read()
+
+    return summary_bytes
+
 
 if __name__ == "__main__":
 

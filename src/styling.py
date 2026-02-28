@@ -1,6 +1,7 @@
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.formatting.rule import FormulaRule
+from openpyxl.styles import Border, Side
 from src.general_postprocessing import get_category_indexes
 
 def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
@@ -129,5 +130,20 @@ def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
         )
 
     ws.conditional_formatting.add(f"H{end_cash_row_idx}:T{end_cash_row_idx}", rule)
+
+    # Add hard border between past weeks and projections
+    med = Side(style="medium")      # or "medium", "thick"
+    #border = Border(right=thin)
+
+    for row in ws.iter_rows(min_row=3, max_row=ws.max_row):
+        cell = row[6]  # Column G (0-based index → A=0, G=6)
+        
+        # Preserve existing borders
+        cell.border = Border(
+            left=cell.border.left,
+            right=med,
+            top=cell.border.top,
+            bottom=cell.border.bottom
+        )
 
     wb.save(OUTPUT_XLSX)

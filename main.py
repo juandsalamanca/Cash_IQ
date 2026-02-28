@@ -6,8 +6,8 @@ from src.ai_summary import get_summary
 
 if "excel_bytes" not in st.session_state:
     st.session_state.excel_bytes = None
-if "summary" not in st.session_state:
-    st.session_state.summary = ""
+if "summary_bytes" not in st.session_state:
+    st.session_state.summary_bytes = None
 st.header("Cash IQ")
 
 client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "SupafitGrow", "Gamechanger"])
@@ -84,14 +84,14 @@ if st.session_state.excel_bytes is not None:
     )
     summary_button = st.button("Get summary")
     if summary_button:
-        st.session_state.summary = get_summary(date_strt, output_file_name)
+        st.session_state.summary_bytes = get_summary(date_strt, output_file_name)
 
-    if st.session_state.summary:
-        st.write("Summary done")
+    if st.session_state.summary_bytes is not None:
+
         st.download_button(
             label="Download Summary",
-            data=st.session_state.summary,
-            file_name="summary.txt",
-            mime="text/plain",
+            data=st.session_state.summary_bytes,
+            file_name="summary.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             icon=":material/download:",
             )
