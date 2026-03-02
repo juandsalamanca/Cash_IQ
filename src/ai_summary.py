@@ -121,7 +121,7 @@ def turn_summary_into_word_doc(summary_json):
                     # Subsection header
                     if subsection == "name":
                         p = doc.add_paragraph()
-                        run = p.add_run(f"{n+1}.{insight[subsection]}")
+                        run = p.add_run(f"{n+1}. {insight[subsection]}")
                         run.bold = True
                         run.font.size = Pt(18)
                         run.font.name = "Inter"

@@ -90,6 +90,8 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
             out_rows.append(pd.Series(out_row, index=cols, name=idx))
         
     inflows_tbl = pd.DataFrame(in_rows, columns=combined_full.columns)
+    print("Inflows table before collapsing 'Other':")
+    print(inflows_tbl.head())
     inflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
     outflows_tbl = pd.DataFrame(out_rows, columns=combined_full.columns)
     outflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']

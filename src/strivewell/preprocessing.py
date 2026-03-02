@@ -38,10 +38,13 @@ def load_and_clean_gl(GL_PATH, coa):
     col_names1 = ["account_section","date","txn_type","num","name"]
     col_names2 = ["memo","split_account","amount","balance"]
 
-    if "Store" in gl.loc[3].to_list():
-        col_names1 += ["store"]
-    if "Class" in gl.loc[3].to_list():
-        col_names1 += ["class"]
+    for col in gl.loc[3].to_list():
+        if pd.isna(col) == False:
+            if "Store" in col:
+                col_names1 += ["store"]
+            if "Class" in col:
+                col_names1 += ["class"]
+                
     col_names = col_names1 + col_names2
 
     print(f"GL columns: {col_names}")

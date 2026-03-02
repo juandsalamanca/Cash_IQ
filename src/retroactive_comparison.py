@@ -54,7 +54,6 @@ def learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX, inflows_by_cat
 
     old_wb = load_workbook(previous_cashiq_path)
 
-    # Define styles
     ws = old_wb.active
     allowed_colors = ['FFF2977E', '00000000', 'FF53C9B8', 'FFA3A5D0', 'FFBFBFBF']
     adjustments = []
@@ -111,7 +110,7 @@ def compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows
     previous_cashiq_df = pd.read_excel(previous_cashiq_path)[4:].reset_index(drop=True)
     new_cashiq = pd.read_excel(TEMP_OUTPUT_XLSX, sheet_name="Projections (Table)")
 
-    simplified_previous_cashiq_df = unify_category_columns(previous_cashiq_df, 3).drop(columns=["Unnamed: 0", "13 Week Cash Flow Forcast", "Unnamed: 2"])
+    simplified_previous_cashiq_df = unify_category_columns(previous_cashiq_df, 3).drop(columns=previous_cashiq_df.columns[:3].to_list())
     simplified_new_cashiq = unify_category_columns(new_cashiq, 2).drop(columns=new_cashiq.columns[:2].to_list())
     mismatches = get_mismatches(simplified_previous_cashiq_df, simplified_new_cashiq)
     mismatch_df = pd.json_normalize(mismatches)
