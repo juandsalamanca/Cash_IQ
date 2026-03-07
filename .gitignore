@@ -2,6 +2,7 @@
 .env
 output.xlsx
 output_temp.xlsx
+cash_iq_summary.docx
 
 # Folders
 __pycache__/

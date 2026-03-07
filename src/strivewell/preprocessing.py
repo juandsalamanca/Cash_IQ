@@ -7,7 +7,13 @@ from src.general_preprocessing import safe_strip, to_numeric, monday_week_start
 # =========================
 
 def load_and_clean_coa(COA_PATH):
-    coa = pd.read_excel(COA_PATH, skiprows=3, names=["full_name","type","detail_type","description","total_balance"])
+    coa = pd.read_excel(COA_PATH, skiprows=3)
+    # If there is an account # we concatenate it with the account name
+    if "Account #" in coa.columns:
+        coa["Account #"] = coa["Account #"].fillna('')
+        coa["Full name"] = coa["Account #"].astype(str) + " " + coa["Full name"]
+    coa = coa.drop(columns=["Account #"])
+    coa.columns = ["full_name","type","detail_type","description","total_balance"]
     coa = coa[(coa["type"].notna()) & (coa["full_name"].notna())].copy()
     coa["full_name"] = safe_strip(coa["full_name"])
     coa["type"] = safe_strip(coa["type"])
@@ -27,10 +33,25 @@ def load_and_clean_coa(COA_PATH):
 
 def load_and_clean_gl(GL_PATH, coa):
 
+    gl = pd.read_excel(GL_PATH)
+
+    col_names1 = ["account_section","date","txn_type","num","name"]
+    col_names2 = ["memo","split_account","amount","balance"]
+
+    for col in gl.loc[3].to_list():
+        if pd.isna(col) == False:
+            if "Store" in col:
+                col_names1 += ["store"]
+            if "Class" in col:
+                col_names1 += ["class"]
+                
+    col_names = col_names1 + col_names2
+
+    print(f"GL columns: {col_names}")
     gl = pd.read_excel(
         GL_PATH,
         skiprows=4,
-        names=["account_section","date","txn_type","num","name","memo","split_account","amount","balance"],
+        names=col_names,
     )
 
     gl["account_name"] = gl["account_section"].ffill()

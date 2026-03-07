@@ -8,6 +8,12 @@ def week_of_month(dt: pd.Timestamp) -> int:
 def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
+def allocate_to_weeks(dates, amounts, week_starts):
+    s = pd.Series(amounts, index=pd.to_datetime(dates))
+    wk = monday_week_start(s.index.to_series())
+    out = s.groupby(wk).sum()
+    return out.reindex(week_starts, fill_value=0.0)
+
 def project_weekly_pattern(series_hist, proj_weeks):
     """
     Project a weekly-flow line:
@@ -185,3 +191,79 @@ def replicate_last_year_transactions(s_hist, proj_week_starts):
     proj_series = pd.Series(projection_list, index=proj_week_starts)
     return proj_series
 
+def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, beg_bal_series, end_bal_series, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance=0.0):
+    # Template-style table
+    rows = []
+    rows.append(("Week Number", "", ""))
+    rows.append(("", "", ""))
+    cash_balance_indexes = []
+    rows.append(("Beginning Bank Balance", "", ""))
+    cash_balance_indexes.append(len(rows)+1)
+    rows.append(("Cash Inflows", "", ""))
+    inflow_section_indexes = []
+    for inflow_cat in inflows_by_cat:
+        rows.append(("", inflow_cat, ""))
+        inflow_section_indexes.append(len(rows)+1)
+        for acct in sorted(inflows_by_cat[inflow_cat]):
+            rows.append(("", "", acct))
+
+        rows.append(("", "", ""))
+
+    rows.append(("Total Cash Inflows", "", ""))
+    inflow_section_indexes.append(len(rows)+1)
+    rows.append(("Cash Outflows", "", ""))
+    outflow_section_indexes = []
+    for outflow_cat in outflows_by_cat:
+        rows.append(("", outflow_cat, ""))
+        outflow_section_indexes.append(len(rows)+1)
+        for acct in sorted(outflows_by_cat[outflow_cat]):
+            rows.append(("", "", acct))
+
+        rows.append(("", "", ""))
+
+    rows.append(("Total Cash Outflows", "", ""))
+    outflow_section_indexes.append(len(rows)+1)
+    rows.append(("", "", ""))
+    rows.append(("Ending Bank Balance", "", ""))
+    cash_balance_indexes.append(len(rows)+1)
+
+    proj_sheet = pd.DataFrame(rows, columns=["Section","Notes","Line Item"])
+    for w in all_week_starts:
+        proj_sheet[w.strftime("%Y-%m-%d")] = np.nan
+
+    def put_row_value(section, acct, values):
+        mask = (proj_sheet["Section"].eq(section)) & (proj_sheet["Line Item"].eq(acct))
+        idx = proj_sheet.index[mask]
+        if len(idx):
+            i = idx[0]
+            for w in all_week_starts:
+                if isinstance(values[w], int) or isinstance(values[w], float):
+                    proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
+                elif isinstance(values[w], str):
+       
+                    proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = values[w]
+
+    week_numbers = [""]*4 + [f"Week {n+1}" for n in range(13)]
+    week_number_series = pd.Series(week_numbers, index=all_week_starts)
+    put_row_value("Week Number","", week_number_series)
+    put_row_value("Beginning Bank Balance","", beg_bal_series)
+    put_row_value("Ending Bank Balance","", end_bal_series)
+    put_row_value("Total Cash Inflows","", total_inflows)
+    put_row_value("Total Cash Outflows","", total_outflows)
+
+    for index, row in inflows_present.iterrows():
+        if len(index) == 3:
+            acct = index[0]
+        else:
+            acct = index
+        put_row_value("", acct, row)
+    for index, row in outflows_present.iterrows():
+        if len(index) == 3:
+            acct = index[0]
+        else:
+            acct = index
+        put_row_value("", acct, row)
+
+    proj_sheet.iloc[2,7] = week1_cash_balance
+    
+    return proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes

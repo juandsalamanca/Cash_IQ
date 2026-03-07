@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-from src.trinity.projections import (build_weekly_series, project_weekly_pattern, project_cadenced_events, 
-                                     allocate_to_weeks, replicate_last_year_transactions, week_of_month, 
-                                     is_weekly_flow)
+from src.projections import build_weekly_series, replicate_last_year_transactions, is_weekly_flow, project_cadenced_events, week_of_month, project_weekly_pattern, allocate_to_weeks
 
 
 # =========================

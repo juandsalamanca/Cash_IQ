@@ -1,5 +1,5 @@
 from src.trinity.preprocessing import monday_week_start
-from src.trinity.projections import week_of_month, project_weekly_pattern, classify_cadence
+from src.projections import classify_cadence, week_of_month, project_weekly_pattern
 import pandas as pd
 
 

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+from src.projections import build_projections_table
 
 def collapse_other(df, keep_index, other_name):
     idx_names = list(df.index.names)
@@ -37,7 +38,7 @@ def build_inflows_outflows(combined, actual_starts, TOP_N_INFLOW_LINES, TOP_N_OU
     return inflows_present, outflows_present, total_inflows, total_outflows
 
 
-def write_output_excel(all_starts, beginning_cash_balance, total_inflows, total_outflows, inflows_present, outflows_present, acct_info, cash_tx, OUTPUT_XLSX):
+def write_output_excel(all_starts, inflows_by_cat, outflows_by_cat, beginning_cash_balance, total_inflows, total_outflows, inflows_present, outflows_present, acct_info, cash_tx, OUTPUT_XLSX, week1_cash_balance=0.0):
     
     # Balances
     beg_bal = pd.Series(index=all_starts, dtype=float)
@@ -57,51 +58,7 @@ def write_output_excel(all_starts, beginning_cash_balance, total_inflows, total_
         "Ending Bank Balance": [end_bal[w] for w in all_starts],
     })
 
-    # Projections table: NO Account col, NO duplicates (line_item index is unique now)
-    rows = []
-    rows.append(("Beginning Bank Balance", ""))
-    rows.append(("Cash Inflows", ""))
-    for line in inflows_present.index:
-        rows.append(("", line))
-    rows.append(("Total Cash Inflows", ""))
-    rows.append(("Cash Outflows", ""))
-    for line in outflows_present.index:
-        rows.append(("", line))
-    rows.append(("Total Cash Outflows", ""))
-    rows.append(("Ending Bank Balance", ""))
-
-    proj_table = pd.DataFrame(rows, columns=["Section","Line Item"])
-    for w in all_starts:
-        proj_table[w.strftime("%Y-%m-%d")] = np.nan
-
-    def put(section, series):
-        m = (proj_table["Section"] == section) & (proj_table["Line Item"] == "")
-        if not m.any(): return
-        i = proj_table.index[m][0]
-        for w in all_starts:
-            proj_table.loc[i, w.strftime("%Y-%m-%d")] = float(series[w])
-
-    put("Beginning Bank Balance", beg_bal)
-    put("Total Cash Inflows", total_inflows)
-    put("Total Cash Outflows", total_outflows)
-    put("Ending Bank Balance", end_bal)
-
-    for line, row in inflows_present.iterrows():
-        m = (proj_table["Section"] == "") & (proj_table["Line Item"] == line)
-        if not m.any(): continue
-        i = proj_table.index[m][0]
-        for w in all_starts:
-            proj_table.loc[i, w.strftime("%Y-%m-%d")] = float(row[w])
-
-    for line, row in outflows_present.iterrows():
-        m = (proj_table["Section"] == "") & (proj_table["Line Item"] == line)
-        if not m.any(): continue
-        i = proj_table.index[m][0]
-        for w in all_starts:
-            proj_table.loc[i, w.strftime("%Y-%m-%d")] = float(row[w])
-
-    date_cols = [c for c in proj_table.columns if re.match(r"^\d{4}-\d{2}-\d{2}$", str(c))]
-    proj_table[date_cols] = proj_table[date_cols].apply(pd.to_numeric, errors="coerce").round(2)
+    proj_table, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = build_projections_table(all_starts, inflows_by_cat, outflows_by_cat, beg_bal, end_bal, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance)
 
     with pd.ExcelWriter(OUTPUT_XLSX, engine="openpyxl") as writer:
         summary.to_excel(writer, sheet_name="Summary", index=False)
@@ -110,3 +67,5 @@ def write_output_excel(all_starts, beginning_cash_balance, total_inflows, total_
         outflows_present.reset_index().to_excel(writer, sheet_name="Cash Outflows (Detail)", index=False)
         acct_info.to_excel(writer, sheet_name="Detected Bank Accounts", index=False)
         cash_tx.sort_values(["account_name","date"]).to_excel(writer, sheet_name="Cash Tx (Bank Only)", index=False)
+
+    return inflow_section_indexes, outflow_section_indexes, cash_balance_indexes
