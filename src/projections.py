@@ -191,6 +191,68 @@ def replicate_last_year_transactions(s_hist, proj_week_starts):
     proj_series = pd.Series(projection_list, index=proj_week_starts)
     return proj_series
 
+
+def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_week_starts, PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names, cc_accounts=None):
+
+    # =========================
+    # PROJECT BANK CASH LINES (non-CC-payment lines + CC payments separately)
+    # =========================
+    hist_bank_tx = bank_tx[(bank_tx["date"] >= cadence_start) & (bank_tx["date"] <= cadence_end)].copy()
+
+    if cc_accounts is not None:
+        # Separate CC payments (bank -> CC account)
+        hist_ccpay_bank = hist_bank_tx[hist_bank_tx["split_account"].isin(cc_accounts)].copy()
+        hist_noncc_bank = hist_bank_tx[~hist_bank_tx["split_account"].isin(cc_accounts)].copy()
+    else:
+        hist_noncc_bank = hist_bank_tx.copy()
+
+    # Build projection matrix for all bank lines
+    proj_bank = pd.DataFrame(0.0, index=bank_actual_pivot.index, columns=proj_week_starts)
+
+    for key, df_line in hist_noncc_bank.groupby(idx_names):
+        df_line = df_line.sort_values("date")
+        s_hist = build_weekly_series(df_line[["date","amount"]], hist_week_starts)
+
+        # If series exists and more than half values are non zero, return true, else return false
+        if is_weekly_flow(s_hist):
+            # Get projections based on linear slopes for eahc week of the month
+            # These projections therefore get weekly cyclical trends and linear long term trends
+            proj_series = project_weekly_pattern(s_hist, proj_week_starts)
+        else:
+
+            future_events = project_cadenced_events(df_line["date"], df_line["amount"], PROJ_WEEK1_START, proj_end_date, cadence_start, cadence_end)
+            if future_events:
+                dts, amts = zip(*future_events)
+                proj_series = allocate_to_weeks(dts, amts, proj_week_starts)
+            else:
+                tail = s_hist.iloc[-26:] if len(s_hist) else s_hist
+                wom = pd.Series([week_of_month(w) for w in tail.index], index=tail.index)
+                wom_median = tail.groupby(wom).median()
+                found = False
+                for amnt in wom_median:
+                    if amnt != 0.0:
+                        found = True
+                        break
+
+                if found:
+                    overall = float(tail.median()) if len(tail) else 0.0
+                    proj_series = pd.Series(
+                        [float(wom_median.get(week_of_month(w), overall)) for w in proj_week_starts],
+                        index=proj_week_starts
+                    )
+                # If all medians are zero we replicate last year tendencies
+                else:
+                    proj_series = replicate_last_year_transactions(s_hist, proj_week_starts)
+
+        if key in proj_bank.index:
+            proj_bank.loc[key, proj_week_starts] = proj_series.values
+        else:
+            proj_bank.loc[key] = 0.0
+            proj_bank.loc[key, proj_week_starts] = proj_series.values
+
+    return hist_ccpay_bank, proj_bank
+
+
 def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, beg_bal_series, end_bal_series, total_inflows, total_outflows, inflows_present, outflows_present, week1_cash_balance=0.0):
     # Template-style table
     rows = []

@@ -1,7 +1,174 @@
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 import pandas as pd
+from src.projections import build_projections_table
 
+
+def collapse_other(df, keep_index, other_name, index_names):
+    keep = df.loc[keep_index].copy() if len(keep_index) else df.iloc[0:0].copy()
+    other = df.drop(index=keep_index, errors="ignore").copy()
+    if len(other):
+        other_row = other.sum(axis=0)
+        other_idx = pd.MultiIndex.from_tuples([(other_name, "Other", "")], names=index_names)
+        other_df = pd.DataFrame([other_row.values], index=other_idx, columns=df.columns)
+        keep = pd.concat([keep, other_df], axis=0)
+    return keep
+
+def get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts):
+    # =========================
+    # BEGIN/END CASH BALANCE
+    # =========================
+    beg_bal_series = pd.Series(index=all_week_starts, dtype=float)
+    end_bal_series = pd.Series(index=all_week_starts, dtype=float)
+
+    running_begin = beginning_cash_balance
+    for w in all_week_starts:
+        beg_bal_series[w] = running_begin
+        running_end = running_begin + float(total_inflows[w]) - float(total_outflows[w])
+        end_bal_series[w] = running_end
+        running_begin = running_end
+
+    return beg_bal_series, end_bal_series
+
+def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, idx_names):
+    # =========================
+    # BUILD INFLOWS/OUTFLOWS PRESENTATION (NO FLAT)
+    # =========================
+    trailing_actual = combined_full[actual_week_starts].copy()
+    inflow_mask  = combined_full.sum(axis=1) > 0
+    outflow_mask = combined_full.sum(axis=1) < 0
+
+    # rank lines by trailing magnitude
+    top_inflows = (
+        combined_full.loc[inflow_mask]
+        .assign(trailing_inflow=lambda df: trailing_actual.loc[df.index].clip(lower=0).sum(axis=1))
+        .sort_values("trailing_inflow", ascending=False)
+        .head(TOP_N_INFLOW_LINES)
+        .index
+    )
+
+    top_outflows = (
+        combined_full.loc[outflow_mask]
+        .assign(trailing_outflow=lambda df: (-trailing_actual.loc[df.index].clip(upper=0)).sum(axis=1))
+        .sort_values("trailing_outflow", ascending=False)
+        .head(TOP_N_OUTFLOW_LINES)
+        .index
+    )
+
+    in_rows = []
+    out_rows = []
+    cols = combined_full.columns
+    ref = [0 for n in range(len(combined_full.columns))]
+    for i in range(len(combined_full)):
+        in_row = []
+        out_row = []
+        idx  = combined_full.index[i]
+        for j in range(len(combined_full.columns)):
+            value = combined_full.iloc[i, j]
+            if value > 0:
+                in_row.append(value)
+                out_row.append(0)
+            elif value < 0:
+                in_row.append(0)
+                out_row.append(value)
+            else:
+                in_row.append(0)
+                out_row.append(0)
+
+        if in_row != ref:
+            in_rows.append(pd.Series(in_row, index=cols, name=idx))
+        if out_row != ref:
+            out_rows.append(pd.Series(out_row, index=cols, name=idx))
+        
+    inflows_tbl = pd.DataFrame(in_rows, columns=combined_full.columns)
+    inflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
+    outflows_tbl = pd.DataFrame(out_rows, columns=combined_full.columns)
+    outflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
+
+    inflows_tbl  = collapse_other(inflows_tbl,  top_inflows,  "Other Inflows",  idx_names)
+    outflows_tbl = collapse_other(outflows_tbl, top_outflows, "Other Outflows", idx_names)
+
+    # Presentation: inflows positive; outflows positive
+    inflows_present  = inflows_tbl.copy()
+    outflows_present = outflows_tbl.copy().abs()
+
+    total_inflows  = inflows_present.sum(axis=0)
+    total_outflows = outflows_present.sum(axis=0)
+
+    # Account for any empty split account, marked as unmapped
+    inflows_present.index = inflows_present.index.set_levels(
+        ['Unmapped' if level == '' else level for level in inflows_present.index.levels[0]],
+        level=0
+    )
+    outflows_present.index = outflows_present.index.set_levels(
+        ['Unmapped' if level == '' else level for level in outflows_present.index.levels[0]],
+        level=0
+    )
+   
+    return inflows_present, outflows_present, total_inflows, total_outflows
+
+def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows,
+                        total_outflows, cc_spend_proj_display=None, cc_spend_actual_display=None, cc_payment_alloc_present=None, cc_spend_txn=None, 
+                        cc_payment_schedule=None, beg_bal_series=None, end_bal_series=None, PROJ_WEEK1_START="", OUTPUT_XLSX="", week1_cash_balance=0.0,
+                        VENDOR_SUMMARY_PATH=None, ar=None, ar_assumptions_df=None):
+    # =========================
+    # WRITE OUTPUT EXCEL
+    # =========================
+    with pd.ExcelWriter(OUTPUT_XLSX, engine="openpyxl") as writer:
+        # Summary
+        summary = pd.DataFrame(
+            {
+                "Week Start": all_week_starts,
+                "Beginning Bank Balance": [beg_bal_series[w] for w in all_week_starts],
+                "Total Cash Inflows": [total_inflows[w] for w in all_week_starts],
+                "Total Cash Outflows": [total_outflows[w] for w in all_week_starts],
+                "Ending Bank Balance": [end_bal_series[w] for w in all_week_starts],
+            }
+        )
+        summary.to_excel(writer, sheet_name="Summary", index=False)
+
+        # Cash details
+        inflows_present.reset_index().to_excel(writer, sheet_name="Cash Inflows (Detail)", index=False)
+        outflows_present.reset_index().to_excel(writer, sheet_name="Cash Outflows (Detail)", index=False)
+
+        # Credit card sheets
+        cc_list = [cc_spend_txn, cc_spend_actual_display, cc_spend_proj_display, cc_payment_schedule, cc_payment_alloc_present]
+        if all(cc is not None for cc in cc_list):
+            cc_spend_txn.sort_values(["account_name","date"]).to_excel(writer, sheet_name="CC Spend - Transactions", index=False)
+            cc_spend_actual_display.reset_index().to_excel(writer, sheet_name="CC Spend - Weekly (Hist)", index=False)
+            cc_spend_proj_display.reset_index().to_excel(writer, sheet_name="CC Spend - Weekly (Proj)", index=False)
+            cc_payment_schedule.to_excel(writer, sheet_name="CC Payments - Schedule", index=False)
+            cc_payment_alloc_present.reset_index().to_excel(writer, sheet_name="Cash - CC Pay Allocation", index=False)
+
+        
+
+        proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = build_projections_table(all_week_starts, 
+                                                                                                                    inflows_by_cat, 
+                                                                                                                    outflows_by_cat, 
+                                                                                                                    beg_bal_series, 
+                                                                                                                    end_bal_series, 
+                                                                                                                    total_inflows, 
+                                                                                                                    total_outflows, 
+                                                                                                                    inflows_present, 
+                                                                                                                    outflows_present, 
+                                                                                                                    week1_cash_balance)
+
+        proj_sheet.to_excel(writer, sheet_name="Projections (Table)", index=False)
+
+        ar_list = [ar, ar_assumptions_df]
+        if all(a is not None for a in ar_list):
+            ar.to_excel(writer, sheet_name="AR Aging (Raw)", index=False)
+            ar_assumptions_df.to_excel(writer, sheet_name="AR Collections (Assumptions)", index=False)
+
+        if VENDOR_SUMMARY_PATH is not None:
+            vendor_summary = pd.read_excel(VENDOR_SUMMARY_PATH)
+            vendor_summary.columns = [str(c).strip() for c in vendor_summary.columns]
+            vendor_summary.to_excel(writer, sheet_name="Expenses by Vendor (Raw)", index=False)
+
+        print(f"Saved: {OUTPUT_XLSX}")
+        print(f"Projection Week 1 starts: {PROJ_WEEK1_START.date()} (Monday)")
+
+    return inflow_section_indexes, outflow_section_indexes, cash_balance_indexes
 
 def calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
 

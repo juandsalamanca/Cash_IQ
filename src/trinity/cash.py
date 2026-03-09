@@ -31,7 +31,11 @@ def begin_cash(gl, coa, PROJ_WEEK1_START, bank_accounts, cc_accounts):
     #   - keep bank->CC payments (cash outflow)
     # =========================
     bank_tx = gl[gl["account_name"].isin(bank_accounts)].copy()
+    if bank_tx.empty: 
+        raise ValueError("No transactions found for bank accounts. Please check your GL and COA files to ensure bank accounts are properly labeled and transactions are present.")
     bank_tx = bank_tx[~bank_tx["split_account"].isin(bank_accounts)].copy()
+    if bank_tx.empty:
+        raise ValueError("No transactions found for bank accounts after removing bank-to-bank transfers. Please check your GL and COA files to ensure transactions are properly labeled.")
 
     # explicitly label bank->CC as Credit Card for split_type (if not already)
     bank_tx.loc[bank_tx["split_account"].isin(cc_accounts), "split_type"] = "Credit Card"

@@ -27,6 +27,7 @@ def get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_wee
     ).fillna(0.0)
 
     combined_full = combined_bank.reindex(columns=all_week_starts, fill_value=0.0)
+
     return combined_full
 
 def collapse_other(df, keep_index, other_name, index_names):
@@ -90,8 +91,6 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
             out_rows.append(pd.Series(out_row, index=cols, name=idx))
         
     inflows_tbl = pd.DataFrame(in_rows, columns=combined_full.columns)
-    print("Inflows table before collapsing 'Other':")
-    print(inflows_tbl.head())
     inflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
     outflows_tbl = pd.DataFrame(out_rows, columns=combined_full.columns)
     outflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
@@ -160,7 +159,9 @@ def get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, cc_payment_a
 
 
 
-def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, week1_cash_balance=0.0):
+def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
+                       total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present, cc_spend_txn, 
+                       cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, week1_cash_balance=0.0):
     # =========================
     # WRITE OUTPUT EXCEL
     # =========================

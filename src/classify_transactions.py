@@ -67,7 +67,7 @@ def get_classifications(client, inflows_present, outflows_present):
     key_mapping_inflows = client_data["key_mapping_inflows"]
     key_mapping_outflows = client_data["key_mapping_outflows"]
 
-    if client == "trinity":
+    if client in ["trinity", "strivewell", "luna"]:
         inflows_format = TrinityInflowsFormat
         outflows_format = TrinityOutflowsFormat
     elif client == "parisi":
@@ -90,9 +90,10 @@ def get_classifications(client, inflows_present, outflows_present):
 
     return inflows_by_cat, outflows_by_cat
 
+
 if __name__ == "__main__":
-    pass
-    '''
+    #pass
+    
     inflow_categories = """collected: Any AR Customer or Account that is a Income account.
     line_credit: Any inflow that is related to a Liability account
     other: Any account labeled as Other Income."""
@@ -101,8 +102,8 @@ if __name__ == "__main__":
     credit_cards_loans: Any account that is Credit card or Liability.
     owner_expenses: Any account that is an equity account."""
 
-    key_mapping_inflows = {'line_credit': 'Line of Credit Advances', 'other': 'Other Income', 'collected': 'AR Collected'}
-    key_mapping_outflows = {'expenses_accounts_payable': 'Expenses Accounts Payable', 'credit_cards_loans': 'Credit Cards and Loans', 'owner_expenses': "Owner's Expense"}
+    key_mapping_inflows = {'line_credit': 'Line of Credit Advances and Loan', 'other': 'Other Income', 'collected': 'AR Collected'}
+    key_mapping_outflows = {'expenses_accounts_payable': 'Expenses & Accounts Payable', 'credit_cards_loans': 'Credit Cards and Loans', 'owner_expenses': "Owner's Expense"}
 
     parisi_inflow_categories = """income: Any AR Customer or Account that is a Income account.
     line_credit: Any inflow that is related to a Liability account
@@ -114,10 +115,14 @@ if __name__ == "__main__":
 
     data = {"trinity":
             {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
+            "strivewell":
+            {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
+            "luna":
+            {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
             "parisi": 
             {"inflow_categories": parisi_inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": parisi_key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows}}
     
     with open('client_data.json', 'w') as f:
         json.dump(data, f)
 
-    '''
+    

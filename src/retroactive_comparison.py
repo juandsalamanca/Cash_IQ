@@ -79,6 +79,8 @@ def learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX, inflows_by_cat
         col = adjustment["column"]
         val = adjustment["value"]
         if val == category:
+            if group == "Line of Credit Advances":
+                group = "Line of Credit Advances and Loan"
             new_accounts[category] = {"row": row, "group": group}
         for i in range(1, ws.max_row+1):
             if new_ws[i][2].value == category:
