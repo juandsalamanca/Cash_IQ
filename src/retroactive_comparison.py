@@ -94,15 +94,23 @@ def learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX, inflows_by_cat
     group_list = list(new_cash_iq_group_indexes.keys())
 
     added_rows = 0
-    for account in new_accounts:
-        row = new_accounts[account]["row"]
-        group = new_accounts[account]["group"]
-        next_group = group_list[group_list.index(group)+1]
-        next_group_indexes = new_cash_iq_group_indexes[next_group]
-        new_ws.insert_rows(next_group_indexes[0]+added_rows)
-        for j in range(len(new_ws[next_group_indexes[0]+added_rows])):
-            new_ws[next_group_indexes[0]+added_rows-1][j-1].value = ws[row][j].value
-        added_rows += 1
+    try:
+        for account in new_accounts:
+            row = new_accounts[account]["row"]
+            group = new_accounts[account]["group"]
+            next_group = group_list[group_list.index(group)+1]
+            next_group_indexes = new_cash_iq_group_indexes[next_group]
+            new_ws.insert_rows(next_group_indexes[0]+added_rows)
+            for j in range(len(new_ws[next_group_indexes[0]+added_rows])):
+                new_ws[next_group_indexes[0]+added_rows-1][j-1].value = ws[row][j].value
+            added_rows += 1
+    except Exception as e:
+        error_message = f"""Error while adding new accounts from previous Cash IQ: {str(e)}.
+        Please check the format of the previous Cash IQ and ensure it matches the expected structure:
+        Inflows: 'Line of Credit Advances and Loan', 'Other Income', 'AR Collected'
+        Outflows: 'Expenses & Accounts Payable', 'Credit Cards And Loans', 'Owner's Expense'
+        """
+        raise ValueError(error_message)
 
     new_wb.save(OUTPUT_XLSX)
 

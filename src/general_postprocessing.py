@@ -207,10 +207,13 @@ def calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
                     for n in range(idx+1, next_idx-1):
                         summand = ws[n][col].value
                         if summand is not None and pd.isna(summand) == False:
-                            if operation == 'SUM':
-                                number_value += summand
-                            else:
-                                number_value -= summand
+                            try:
+                                if operation == 'SUM':
+                                    number_value += summand
+                                else:
+                                    number_value -= summand
+                            except Exception as e:
+                                raise TypeError(f"Error adding {summand} from row {n} to total for category at row {idx}, column {col}: {str(e)}")
                     ws_2[idx][col].value = number_value
                 else:
                     row[col].value = 0.0

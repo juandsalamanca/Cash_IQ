@@ -103,7 +103,7 @@ if __name__ == "__main__":
     owner_expenses: Any account that is an equity account."""
 
     key_mapping_inflows = {'line_credit': 'Line of Credit Advances and Loan', 'other': 'Other Income', 'collected': 'AR Collected'}
-    key_mapping_outflows = {'expenses_accounts_payable': 'Expenses & Accounts Payable', 'credit_cards_loans': 'Credit Cards and Loans', 'owner_expenses': "Owner's Expense"}
+    key_mapping_outflows = {'expenses_accounts_payable': 'Expenses & Accounts Payable', 'credit_cards_loans': 'Credit Cards And Loans', 'owner_expenses': "Owner's Expense"}
 
     parisi_inflow_categories = """income: Any AR Customer or Account that is a Income account.
     line_credit: Any inflow that is related to a Liability account

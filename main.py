@@ -76,8 +76,10 @@ if process:
         st.error("Please upload all required files and select a date.")
 
     else:
-        
-        st.session_state.excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX=output_file_name, previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance, AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file)
+        try:
+            st.session_state.excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX=output_file_name, previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance, AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file)
+        except ValueError as e:
+            st.error(str(e))
         
             
 if st.session_state.excel_bytes is not None:
