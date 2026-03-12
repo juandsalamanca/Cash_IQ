@@ -10,9 +10,7 @@ from src.retroactive_comparison import compare_reports
 import streamlit as st
 
 
-
-@st.cache_data
-def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_path, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
+def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
 
     # TODO: Need to pass all the global vars properly as params through the functions
     # First initialize the DFs and vars we need
@@ -53,26 +51,4 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
                        cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)
     
-    try:
-        TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-    except Exception as e:
-        st.warning(f"Error calculating category totals with excel formulas: {str(e)}")
-
-    try:
-        if previous_cashiq_path is not None:
-            compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-    except Exception as e:
-        st.warning(f"Error comparing with previous Cash IQ report: {str(e)}")
-
-    try:
-        style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-    except Exception as e:
-        st.warning(f"Error styling projections in output Excel file: {str(e)}")
-
-    try:
-        calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-    except Exception as e:
-        st.warning(f"Error calculating category totals with excel formulas after the styling: {str(e)}")
-
-    with open(OUTPUT_XLSX, "rb") as f:
-        return f.read()
+    return inflows_by_cat, outflows_by_cat

@@ -7,8 +7,7 @@ from src.general_postprocessing import calculate_category_totals
 from src.retroactive_comparison import compare_reports
 import streamlit as st
 
-@st.cache_data
-def get_parisi_cash_iq(COA_PATH="", GL_PATH="", date_strt="", OUTPUT_XLSX="parisi_output.xlsx", previous_cashiq_path="", initial_cash_balance=0.0):
+def get_parisi_cash_iq(COA_PATH="", GL_PATH="", date_strt="", OUTPUT_XLSX="parisi_output.xlsx", initial_cash_balance=0.0):
 
     (anchor, actual_starts, proj_starts, all_starts, hist_starts, cadence_start, cadence_end, proj_end_date,
             TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, BANK_CODE_MIN, BANK_CODE_MAX, BANK_NAME_KEYWORDS) = week_windows(date_strt)
@@ -29,14 +28,4 @@ def get_parisi_cash_iq(COA_PATH="", GL_PATH="", date_strt="", OUTPUT_XLSX="paris
                             total_inflows, total_outflows, inflows_present, outflows_present, 
                             acct_info, cash_tx, OUTPUT_XLSX, initial_cash_balance)
 
-    TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    if previous_cashiq_path is not None:
-        compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    with open(OUTPUT_XLSX, "rb") as f:
-        return f.read()
+    return inflows_by_cat, outflows_by_cat

@@ -1,26 +1,43 @@
+import requests
 import streamlit as st
-from src.trinity.main_process import get_trinity_cash_iq
-from src.parisi.main_process import get_parisi_cash_iq
-from src.strivewell.main_process import get_strivewell_cash_iq
-from src.luna.main_process import get_luna_cash_iq
+from src.general_main_process import get_cash_iq
 from src.ai_summary import get_summary
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+if os.getenv("GSHEET_URL") is None:
+    os.environ["GSHEET_URL"] = st.secrets["GSHEET_URL"]
+
+@st.cache_data(show_spinner=False)
+def update_gsheet(client, data):
+
+    url = os.getenv("GSHEET_URL")
+    payload = {
+    client.lower(): data
+    }
+
+    requests.post(url, json=payload)
+
+@st.cache_data(show_spinner=False)
+def retrieve_client_data(client):
+    url = os.getenv("GSHEET_URL")
+    data = requests.get(url)
+    try:
+        client_data = data.json().get(client.lower(), None)
+        return float(client_data)
+    except Exception as e:
+        st.warning(f"Error retrieving the cash for client: {client}")
+        return None
 
 if "excel_bytes" not in st.session_state:
     st.session_state.excel_bytes = None
 if "summary_bytes" not in st.session_state:
     st.session_state.summary_bytes = None
+
 st.header("Cash IQ")
 
 client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "SupafitGrow", "Gamechanger"])
-
-client_map = {
-    "Trinity": get_trinity_cash_iq,
-    "Parisi": get_parisi_cash_iq,
-    "Luna": get_luna_cash_iq,
-    "Strivewell": get_strivewell_cash_iq,
-    "SupafitGrow": get_trinity_cash_iq,
-    "Gamechanger": get_trinity_cash_iq
-    }
 
 coa_file = None
 previous_cashiq_file = None
@@ -28,6 +45,10 @@ ar_file = None
 vendor_file = None
 
 initial_cash_balance = st.number_input("Enter initial cash balance", min_value=0.0)
+
+with st.spinner("Retrieving saved cash floor...", show_time=True):
+    saved_cash_floor = retrieve_client_data(client)    
+cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
 
 if client in ["Trinity", "Strivewell", "SupafitGrow", "Gamechanger"]:
 
@@ -58,7 +79,6 @@ previous_cashiq_file = st.file_uploader(
 )
 
 date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
-projection_function = client_map[client]
 
 if client == "Parisi":
     condition = gl_file and date_strt
@@ -72,12 +92,19 @@ process = st.button("Process")
 output_file_name = "output.xlsx"
 if process:
 
+    if saved_cash_floor != float(cash_floor):
+        with st.spinner("Updating cash floor in Google Sheet...", show_time=True):
+            update_gsheet(client, cash_floor)
+
     if not(condition):
         st.error("Please upload all required files and select a date.")
 
     else:
         try:
-            st.session_state.excel_bytes = projection_function(COA_PATH=coa_file, GL_PATH=gl_file, date_strt=date_strt, OUTPUT_XLSX=output_file_name, previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance, AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file)
+            st.session_state.excel_bytes = get_cash_iq(client=client, COA_PATH=coa_file, GL_PATH=gl_file, 
+                                                       date_strt=date_strt, OUTPUT_XLSX=output_file_name, 
+                                                       previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance, 
+                                                       AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor)
         except ValueError as e:
             st.error(str(e))
         
@@ -100,7 +127,8 @@ if st.session_state.excel_bytes is not None:
     )
     summary_button = st.button("Get summary")
     if summary_button:
-        st.session_state.summary_bytes = get_summary(date_strt, output_file_name)
+        with st.spinner("Getting AI summary...", show_time=True):
+            st.session_state.summary_bytes = get_summary(date_strt, output_file_name)
 
     if st.session_state.summary_bytes is not None:
 

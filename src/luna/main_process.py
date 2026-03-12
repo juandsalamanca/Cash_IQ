@@ -11,9 +11,7 @@ from src.retroactive_comparison import compare_reports
 import streamlit as st
 
 
-
-@st.cache_data
-def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_path, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
+def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
 
     # TODO: 
     # First initialize the DFs and vars we need
@@ -45,14 +43,4 @@ def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_
                        OUTPUT_XLSX=OUTPUT_XLSX, week1_cash_balance=initial_cash_balance, VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, 
                        ar=ar, ar_assumptions_df=ar_assumptions_df)
 
-    TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    if previous_cashiq_path is not None:
-        compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-
-    with open(OUTPUT_XLSX, "rb") as f:
-        return f.read()
+    return inflows_by_cat, outflows_by_cat

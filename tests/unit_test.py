@@ -30,5 +30,6 @@ CREDIT CARD (5290) - 1
 Dues & subscription
 """
 
+# Real unit tests coming soon!
 def tesT_outflows_classification():
     assert True
