@@ -1,13 +1,10 @@
-from src.styling import style_projections
 from src.trinity.preprocessing import week_windows
 from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
 from src.trinity.postprocessing import get_combined_bank, get_cash_balance, get_cc_output_sheets, write_output_excel
 from src.general_preprocessing import load_and_clean_coa, load_and_clean_gl
-from src.general_postprocessing import calculate_category_totals, build_inflows_outflows
+from src.general_postprocessing import build_inflows_outflows
 from src.classify_transactions import get_classifications
-from src.retroactive_comparison import compare_reports
-import streamlit as st
 
 
 def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):

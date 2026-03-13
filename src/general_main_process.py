@@ -1,4 +1,3 @@
-import requests
 import streamlit as st
 from src.retroactive_comparison import compare_reports
 from src.styling import style_projections
@@ -7,6 +6,7 @@ from src.trinity.main_process import get_trinity_cash_iq
 from src.parisi.main_process import get_parisi_cash_iq
 from src.strivewell.main_process import get_strivewell_cash_iq
 from src.luna.main_process import get_luna_cash_iq
+from src.continuum.main_process import get_continuum_cash_iq
 
 
 @st.cache_data(show_spinner=False)
@@ -20,6 +20,7 @@ def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
         "Parisi": get_parisi_cash_iq,
         "Luna": get_luna_cash_iq,
         "Strivewell": get_strivewell_cash_iq,
+        "Continuum": get_continuum_cash_iq,
         "SupafitGrow": get_trinity_cash_iq,
         "Gamechanger": get_trinity_cash_iq
         }

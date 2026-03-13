@@ -1,11 +1,8 @@
 from src.parisi.preprocessing import load_and_clean_gl, week_windows
 from src.parisi.cash import create_cash_pivot, detect_bank_accounts, project_cash
 from src.parisi.postprocessing import build_inflows_outflows, write_output_excel
-from src.styling import style_projections
 from src.classify_transactions import get_classifications
-from src.general_postprocessing import calculate_category_totals
-from src.retroactive_comparison import compare_reports
-import streamlit as st
+
 
 def get_parisi_cash_iq(COA_PATH="", GL_PATH="", date_strt="", OUTPUT_XLSX="parisi_output.xlsx", initial_cash_balance=0.0):
 
