@@ -55,7 +55,7 @@ def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
     except Exception as e:
         st.warning(f"Error calculating category totals with excel formulas after the styling: {str(e)}")
 
-    my_bar.progress(100, text="Done, Excel output ready.")
+    my_bar.progress(100, text="Done")
     with open(OUTPUT_XLSX, "rb") as f:
         return f.read()
     

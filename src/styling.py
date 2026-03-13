@@ -172,4 +172,7 @@ def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat, cash_floor):
         else:
             ws.sheet_state = "visible"
 
+    # Freze panes at D5
+    ws.freeze_panes = "D5"
+
     wb.save(OUTPUT_XLSX)

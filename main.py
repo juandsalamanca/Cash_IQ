@@ -37,7 +37,7 @@ if "summary_bytes" not in st.session_state:
 
 st.header("Cash IQ")
 
-client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "SupafitGrow", "Gamechanger"])
+client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"])
 
 coa_file = None
 previous_cashiq_file = None
@@ -50,7 +50,7 @@ with st.spinner("Retrieving saved cash floor...", show_time=True):
     saved_cash_floor = retrieve_client_data(client)    
 cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
 
-if client in ["Trinity", "Strivewell", "SupafitGrow", "Gamechanger"]:
+if client in ["Trinity", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"]:
 
     coa_file = st.file_uploader(
         "Upload COA file", type=["xlsx", "xls"]
@@ -82,7 +82,7 @@ date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
 
 if client == "Parisi":
     condition = gl_file and date_strt
-elif client in ["Trinity", "Strivewell"]:
+elif client in ["Trinity", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"]:
     condition = coa_file and gl_file and date_strt
 elif client == "Luna":
     condition = ar_file and date_strt and gl_file and coa_file
