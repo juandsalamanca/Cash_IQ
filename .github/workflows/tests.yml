@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GSHEET_URL: ${{ secrets.GSHEET_URL }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
