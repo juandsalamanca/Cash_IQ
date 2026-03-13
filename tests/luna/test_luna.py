@@ -8,10 +8,12 @@ def test_luna_main():
     OUTPUT_XLSX = "tests/luna/output.xlsx"
     previous_cashiq_path = "tests/luna/Luna Locum Weekly Projections CashIQ 02_16_2026.xlsx"
     initial_cash_balance = 11000.0
+    cash_floor=30000.0
+
 
     excel_bytes = get_cash_iq("Luna", COA_PATH, GL_PATH, "2026-02-26", OUTPUT_XLSX, previous_cashiq_path, 
                                    initial_cash_balance, AR_AGING_PATH=AR_AGING_PATH, 
-                                   VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH)
+                                   VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, cash_floor=cash_floor)
 
     # Check that the output is a valid Excel file (starts with PK, which is the signature for ZIP files, and Excel files are ZIP archives)
     assert excel_bytes[:2] == b'PK'

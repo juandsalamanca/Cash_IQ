@@ -8,9 +8,11 @@ def test_trinity_main():
     OUTPUT_XLSX = "tests/trinity/output.xlsx"
     previous_cashiq_path = "tests/trinity/2.9 Trinity Logistics Weekly Projections CashIQ 02_9_2026.xlsx"
     initial_cash_balance = 13000.0
+    cash_floor=40000.0
 
     # Run the main process
-    excel_bytes = get_cash_iq("Trinity", COA_PATH=COA_PATH, GL_PATH=GL_PATH, date_strt=date_strt, OUTPUT_XLSX=OUTPUT_XLSX, previous_cashiq_path=previous_cashiq_path, initial_cash_balance=initial_cash_balance)
+    excel_bytes = get_cash_iq("Trinity", COA_PATH=COA_PATH, GL_PATH=GL_PATH, date_strt=date_strt, OUTPUT_XLSX=OUTPUT_XLSX,
+                              previous_cashiq_path=previous_cashiq_path, initial_cash_balance=initial_cash_balance, cash_floor=cash_floor)
 
     # Check that the output is a valid Excel file (starts with PK, which is the signature for ZIP files, and Excel files are ZIP archives)
     assert excel_bytes[:2] == b'PK'
