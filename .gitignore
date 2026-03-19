@@ -8,6 +8,7 @@ updates.txt
 tests/luna/output.xlsx
 tests/luna/output.xlsx
 .DS_Store
+output.csv
 
 # Folders
 __pycache__/

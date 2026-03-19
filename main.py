@@ -103,7 +103,7 @@ if process:
         try:
             st.session_state.excel_bytes = get_cash_iq(client=client, COA_PATH=coa_file, GL_PATH=gl_file, 
                                                        date_strt=date_strt, OUTPUT_XLSX=output_file_name, 
-                                                       previous_cashiq_path=previous_cashiq_file, initial_cash_balance=initial_cash_balance, 
+                                                       previous_cashiq_file=previous_cashiq_file, initial_cash_balance=initial_cash_balance, 
                                                        AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor)
         except ValueError as e:
             st.error(str(e))

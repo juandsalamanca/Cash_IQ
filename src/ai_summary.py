@@ -27,32 +27,36 @@ class CashIQSummary(BaseModel):
     insights_suggestions: list[InsightSuggestion]
 
 
-def send_data_to_llm(projection_data, date):
+def send_data_to_llm(projection_data, date, data_path):
 
     client = OpenAI()
+
+    system_prompt = """You are a highly skilled financial analyst. You are interpreting monthly data looking for points for
+    improvement and also where things are going well. You have a professional, yet kind and supportive tone with expert insights."""
 
     prompt = f"""I'll provide for you transaction data for the aggregated and projected cash flow for a business. Taking into account today is {date},
     please provide a summary of the data with the following format: a 1 parragraph sumamry plus 4 or 5 suggestions, each with an observation,
     a recommendation based on said observation and a name for the suggestion.
-    
+    I'll also provide you with the file csv file so you can run code on it and get the analytics that you consider relevant
+
     Here is the data:
     {projection_data}"""
 
+    upload_file = client.files.create(file=open(data_path, "rb"), purpose="user_data",
+      expires_after={"anchor": "created_at", "seconds": 43200})
+
+    file_id = upload_file.id
+    print(file_id)
+
     messages = [
-        {"role": "system", "content": "You are a data analyst that is able to understand financial data and provide insights."},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt}
     ]
 
-    if os.getenv("server") == "qa":
-        model = "gpt-5-mini"
-    else:
-        model = "gpt-5"
-
-    print("Using model:", model)
-
     response = client.responses.parse(
-        model=model,
+        model="gpt-5",
         input=messages,
+        tools=[{"type":"code_interpreter", "container": {"type":"auto", "file_ids":[file_id]}}],
         text_format=CashIQSummary,
         #reasoning={"effort": "high"}
     )
@@ -159,7 +163,9 @@ def get_summary(date, OUTPUT_XLSX):
         },
         "data": projections_json
     }
-    summary_json = send_data_to_llm(json.dumps(payload), date).model_dump_json()
+    csv_path = OUTPUT_XLSX.replace(".xlsx", ".csv")
+    projection_df.to_csv(csv_path, index=False)
+    summary_json = send_data_to_llm(json.dumps(payload), date, csv_path).model_dump_json()
     summary_json = json.loads(summary_json)
     new_summary_json = {}
     new_summary_json["Summary"] = summary_json["summary"]
@@ -175,4 +181,4 @@ def get_summary(date, OUTPUT_XLSX):
 
 if __name__ == "__main__":
 
-    print(send_data_to_llm("_", ""))
+    print(send_data_to_llm("_", "", "_"))

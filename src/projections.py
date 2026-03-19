@@ -302,7 +302,7 @@ def build_projections_table(all_week_starts, inflows_by_cat, outflows_by_cat, be
                 if isinstance(values[w], int) or isinstance(values[w], float):
                     proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = float(values[w])
                 elif isinstance(values[w], str):
-       
+                    proj_sheet[w.strftime("%Y-%m-%d")] = proj_sheet[w.strftime("%Y-%m-%d")].astype("object")
                     proj_sheet.loc[i, w.strftime("%Y-%m-%d")] = values[w]
 
     week_numbers = [""]*4 + [f"Week {n+1}" for n in range(13)]
