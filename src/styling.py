@@ -62,7 +62,9 @@ def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat, cash_floor):
     for i, row in enumerate(ws.iter_rows()):
         for j, cell in enumerate(row):
             # Bold for columns A and B and row 4
-            if j==0 or j==1 or i==4:
+            # Because here we use i index from the enumerate method use 0 based index instead of 1 based like we do when using ws[i]
+            # So for the fourth row we use i==3 instead of i==4
+            if j==0 or j==1 or i==3:
                 cell.font = bold_font_style
             else:
                 cell.font = font_style
@@ -166,13 +168,14 @@ def style_projections(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat, cash_floor):
         )
 
     # Hide all tabs except for projections
-    for ws in wb.worksheets:
-        if ws.title != sheet_name:
-            ws.sheet_state = "hidden"
+    for sheet in wb.worksheets:
+        if sheet.title != sheet_name:
+            sheet.sheet_state = "hidden"
         else:
-            ws.sheet_state = "visible"
+            sheet.sheet_state = "visible"
 
     # Freze panes at D5
     ws.freeze_panes = "D5"
 
     wb.save(OUTPUT_XLSX)
+    wb.close()

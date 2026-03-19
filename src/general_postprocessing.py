@@ -331,6 +331,8 @@ def calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
     wb.save(OUTPUT_XLSX)
     TEMP_OUTPUT_XLSX = str(OUTPUT_XLSX)[:-5] + "_temp.xlsx"
     wb_2.save(TEMP_OUTPUT_XLSX)
+    wb.close()
+    wb_2.close()
     return TEMP_OUTPUT_XLSX
 
 
@@ -364,5 +366,7 @@ def get_category_indexes(excel_path, inflows_by_cat, outflows_by_cat, sheet_name
             inflow_section_indexes.append(cat_indexes[key][0])
         if key == "Total Cash Outflows" or key in outflows_by_cat:
             outflow_section_indexes.append(cat_indexes[key][0])
+
+    wb.close()
 
     return cat_indexes, cash_balance_indexes, inflow_section_indexes, outflow_section_indexes

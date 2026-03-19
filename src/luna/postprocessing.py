@@ -35,6 +35,8 @@ def write_output_excel(VENDOR_SUMMARY_PATH, OUTPUT_XLSX, summary, proj_table, in
         outflows_present.reset_index().to_excel(writer, sheet_name="Cash Outflows (Detail)", index=False)
 
         gl.sort_values(["account_name_raw","date"]).to_excel(writer, sheet_name="GL Cleaned", index=False)
-        ar.to_excel(writer, sheet_name="AR Aging (Raw)", index=False)
-        ar_assumptions_df.to_excel(writer, sheet_name="AR Collections (Assumptions)", index=False)
+
+        if ar is not None and ar_assumptions_df is not None:
+            ar.to_excel(writer, sheet_name="AR Aging (Raw)", index=False)
+            ar_assumptions_df.to_excel(writer, sheet_name="AR Collections (Assumptions)", index=False)
         vendor_summary.to_excel(writer, sheet_name="Expenses by Vendor (Raw)", index=False)

@@ -137,6 +137,8 @@ def learn_from_previous_cashiq(previous_cashiq_path, OUTPUT_XLSX, inflows_by_cat
         raise ValueError(error_message)
 
     new_wb.save(OUTPUT_XLSX)
+    old_wb.close()
+    new_wb.close()
 
 def skip_rows_until_week_dates(excel_path, sheet_name=0):
 
@@ -199,13 +201,9 @@ def preprocess_df_for_comparison(excel_path, sheet_name=0):
 def compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat):
 
     # Detect old or new format for both reports without rewriting source workbooks.
-    print(previous_cashiq_path[:15])
     preprocess_df_for_comparison(previous_cashiq_path)
 
-    #print("Preprocessed previous Cash IQ report...")
-    print(previous_cashiq_path[:15])
     previous_cashiq_df = pd.read_excel(previous_cashiq_path)
-    print(previous_cashiq_path[:15])
     new_cashiq = pd.read_excel(TEMP_OUTPUT_XLSX, sheet_name="Projections (Table)")
 
     simplified_previous_cashiq_df = unify_category_columns(previous_cashiq_df, 2).drop(columns=previous_cashiq_df.columns[:2].to_list())

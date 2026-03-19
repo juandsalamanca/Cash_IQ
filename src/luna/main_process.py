@@ -27,7 +27,11 @@ def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_bal
     
     combined = get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts)
 
-    ar, ar_assumptions_df = get_assumptions(AR_AGING_PATH, AR_BUCKET_ASSUMPTIONS, PROJ_WEEK1_START, proj_week_starts, combined)
+    if AR_AGING_PATH is not None:
+        ar, ar_assumptions_df = get_assumptions(AR_AGING_PATH, AR_BUCKET_ASSUMPTIONS, PROJ_WEEK1_START, proj_week_starts, combined)
+    else:
+        ar = None
+        ar_assumptions_df = None
 
     inflows_present, outflows_present, total_inflows, total_outflows = build_inflows_outflows(combined, actual_week_starts, all_week_starts, 
                                                                                               TOP_N_INFLOW_LINES, TOP_N_OUTFLOW_LINES, idx_names)
