@@ -11,7 +11,10 @@ def test_continuum_main():
     cash_floor=20000.0
 
     # Run the main process
-    excel_bytes = get_cash_iq("Continuum", COA_PATH=COA_PATH, GL_PATH=GL_PATH, date_strt=date_strt, OUTPUT_XLSX=OUTPUT_XLSX, previous_cashiq_path=previous_cashiq_path, initial_cash_balance=initial_cash_balance, cash_floor=cash_floor)
+    excel_bytes = get_cash_iq("Continuum",COA_PATH=COA_PATH, GL_PATH=GL_PATH, 
+                                date_strt=date_strt, OUTPUT_XLSX=OUTPUT_XLSX, 
+                                previous_cashiq_file=previous_cashiq_path, initial_cash_balance=initial_cash_balance, 
+                                AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, cash_floor=cash_floor)
 
     # Check that the output is a valid Excel file (starts with PK, which is the signature for ZIP files, and Excel files are ZIP archives)
     assert excel_bytes[:2] == b'PK'

@@ -41,11 +41,14 @@ def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
         try:
             my_bar.progress(40, text="Learning from previous CashIQ report...")
             TEMP_OUTPUT_XLSX = calculate_category_totals(OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-            temp_path = "temp_previous_cashiq.xlsx"
-            with open(temp_path, "wb") as tmp:
-                tmp.write(previous_cashiq_file.getvalue())
-            compare_reports(temp_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
-            os.remove(temp_path)
+            if isinstance(previous_cashiq_file, str):
+                previous_cashiq_path = previous_cashiq_file
+            else:
+                previous_cashiq_path = "temp_previous_cashiq.xlsx"
+                with open(previous_cashiq_path, "wb") as tmp:
+                    tmp.write(previous_cashiq_file.getvalue())
+            compare_reports(previous_cashiq_path, TEMP_OUTPUT_XLSX, OUTPUT_XLSX, inflows_by_cat, outflows_by_cat)
+            os.remove(previous_cashiq_path)
 
         except Exception as e:
             traceback.print_exc()
