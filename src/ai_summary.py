@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.section import WD_SECTION
 from docx.oxml.ns import qn
+from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 
 load_dotenv()
@@ -61,14 +63,91 @@ def send_data_to_llm(projection_data, date, data_path):
         #reasoning={"effort": "high"}
     )
 
+    client.files.delete(file_id)
+
     return response.output_parsed
 
+def create_front_page_image(client_name):
 
-def turn_summary_into_word_doc(summary_json):
+    # Load images
+    background = Image.open("summary_data/4.png")  # full-page image
+    overlay = Image.open("summary_data/Teal + name Crop.jpg")      # smaller image
+
+    # Resize overlay if needed
+    overlay = overlay.resize((1100, 300))  # adjust size
+
+    # Get position (bottom-right)
+    bg_width, bg_height = background.size
+    ov_width, ov_height = overlay.size
+
+    position = (bg_width - ov_width - 250, bg_height - ov_height - 250)  # 20px padding
+
+    # Paste overlay
+    background.paste(overlay, position, overlay if overlay.mode == "RGBA" else None)
+
+    draw = ImageDraw.Draw(background)
+
+    # Load font (make sure the font file exists)
+    font = ImageFont.truetype("summary_data/Inter_28pt-Bold.ttf", 250)
+
+    text_width, text_height = draw.textbbox((0, 0), client_name, font=font)[2:]
+
+    position = (
+        (bg_width - text_width - 800),
+        (bg_height - text_height - 1200)
+    )
+
+    # Draw text
+    draw.text(position, client_name, font=font, fill=(0, 0, 0))
+
+    # Save result
+    front_page_path = "summary_data/front_page.png"
+    background.save(front_page_path)
+    return front_page_path
+
+def turn_summary_into_word_doc(client, summary_json):
 
     summary_path = "cash_iq_summary.docx"
 
     doc = Document()
+
+    #--------------------------
+    # Add Cover Page
+    #--------------------------
+
+    section = doc.sections[0]
+
+    # Remove margins
+    section.left_margin = 0
+    section.right_margin = 0
+    section.top_margin = 0
+    section.bottom_margin = 0
+
+    official_client_name_mapping = {
+        "Trinity": "Trinity Logistics", 
+        "Parisi": "Parisi", 
+        "Luna": "Luna Locums", 
+        "Strivewell": "Strivewell", 
+        "Continuum": "Continuum", 
+        "SupafitGrow": "SupafitGrow", 
+        "Gamechanger": "Gamechanger"
+    }
+
+    client_name = official_client_name_mapping.get(client, client)
+
+    front_page_path = create_front_page_image(client_name)
+
+    # Add full-page image
+    doc.add_picture(front_page_path, width=section.page_width, height=section.page_height)
+
+    # --- Create new section for normal content ---
+    new_section = doc.add_section(WD_SECTION.NEW_PAGE)
+
+    # Reset margins for new section
+    new_section.left_margin = Inches(1)
+    new_section.right_margin = Inches(1)
+    new_section.top_margin = Inches(1)
+    new_section.bottom_margin = Inches(1)
 
     #--------------------------
     # Add Title
@@ -149,7 +228,7 @@ def turn_summary_into_word_doc(summary_json):
     return summary_path
 
 
-def get_summary(date, OUTPUT_XLSX):
+def get_summary(client, date, OUTPUT_XLSX):
     # Option 1: records format (most common)
 
     projection_df = pd.read_excel(OUTPUT_XLSX, sheet_name="Projections (Table)")
@@ -171,7 +250,7 @@ def get_summary(date, OUTPUT_XLSX):
     new_summary_json["Summary"] = summary_json["summary"]
     new_summary_json["Insights and Suggestions"] = summary_json["insights_suggestions"]
 
-    summary_path = turn_summary_into_word_doc(new_summary_json)
+    summary_path = turn_summary_into_word_doc(client, new_summary_json)
 
     with open(summary_path, "rb") as f:
         summary_bytes = f.read()

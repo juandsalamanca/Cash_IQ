@@ -128,7 +128,7 @@ if st.session_state.excel_bytes is not None:
     summary_button = st.button("Get summary")
     if summary_button:
         with st.spinner("Getting AI summary...", show_time=True):
-            st.session_state.summary_bytes = get_summary(date_strt, output_file_name)
+            st.session_state.summary_bytes = get_summary(client, date_strt, output_file_name)
 
     if st.session_state.summary_bytes is not None:
 
@@ -139,3 +139,5 @@ if st.session_state.excel_bytes is not None:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             icon=":material/download:",
             )
+        
+
