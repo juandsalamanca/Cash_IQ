@@ -29,7 +29,7 @@ def get_cc_debt_history(cc_spend_txn, asof_date, PROJ_WEEK1_START, CC_SPEND_TS_W
     cc_spend_hist = cc_spend_txn[(cc_spend_txn["date"] >= cc_spend_hist_start) & (cc_spend_txn["date"] <= asof_date)].copy()
 
     # category = split_account (expense accounts etc.)
-    cc_spend_hist["cat"] = cc_spend_hist["split_account"].fillna("Uncategorized")
+    cc_spend_hist["cat"] = cc_spend_hist["account_name"].fillna("Uncategorized")
 
     # weekly totals per category across ALL CC accounts
     cc_spend_hist["week_start"] = monday_week_start(cc_spend_hist["date"])
@@ -198,7 +198,7 @@ def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_d
 
         # Add rows for each category
         for cat, share in shares.items():
-            line = (f"CC Payment - {cat}", "Credit Card Payment", "")
+            line = (cat, "Credit Card Payment", "")
             if line not in cc_payment_alloc.index:
                 cc_payment_alloc.loc[line, :] = 0.0
             cc_payment_alloc.loc[line, pay_week] += -float(stmt_amt * share)  # signed cash outflow

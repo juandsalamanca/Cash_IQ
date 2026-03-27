@@ -93,7 +93,7 @@ def create_front_page_image(client_name):
     text_width, text_height = draw.textbbox((0, 0), client_name, font=font)[2:]
 
     position = (
-        (bg_width - text_width - 800),
+        (420),
         (bg_height - text_height - 1200)
     )
 
@@ -105,7 +105,7 @@ def create_front_page_image(client_name):
     background.save(front_page_path)
     return front_page_path
 
-def turn_summary_into_word_doc(client, summary_json):
+def turn_summary_into_word_doc(client_name, summary_json):
 
     summary_path = "cash_iq_summary.docx"
 
@@ -122,18 +122,6 @@ def turn_summary_into_word_doc(client, summary_json):
     section.right_margin = 0
     section.top_margin = 0
     section.bottom_margin = 0
-
-    official_client_name_mapping = {
-        "Trinity": "Trinity Logistics", 
-        "Parisi": "Parisi", 
-        "Luna": "Luna Locums", 
-        "Strivewell": "Strivewell", 
-        "Continuum": "Continuum", 
-        "SupafitGrow": "SupafitGrow", 
-        "Gamechanger": "Gamechanger"
-    }
-
-    client_name = official_client_name_mapping.get(client, client)
 
     front_page_path = create_front_page_image(client_name)
 
@@ -228,7 +216,7 @@ def turn_summary_into_word_doc(client, summary_json):
     return summary_path
 
 
-def get_summary(client, date, OUTPUT_XLSX):
+def get_summary(client_name, date, OUTPUT_XLSX):
     # Option 1: records format (most common)
 
     projection_df = pd.read_excel(OUTPUT_XLSX, sheet_name="Projections (Table)")
@@ -250,7 +238,7 @@ def get_summary(client, date, OUTPUT_XLSX):
     new_summary_json["Summary"] = summary_json["summary"]
     new_summary_json["Insights and Suggestions"] = summary_json["insights_suggestions"]
 
-    summary_path = turn_summary_into_word_doc(client, new_summary_json)
+    summary_path = turn_summary_into_word_doc(client_name, new_summary_json)
 
     with open(summary_path, "rb") as f:
         summary_bytes = f.read()

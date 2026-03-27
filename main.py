@@ -35,50 +35,58 @@ if "excel_bytes" not in st.session_state:
 if "summary_bytes" not in st.session_state:
     st.session_state.summary_bytes = None
 
-st.header("Cash IQ")
-
-client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"])
-
 coa_file = None
 previous_cashiq_file = None
 ar_file = None
 vendor_file = None
 
-initial_cash_balance = st.number_input("Enter initial cash balance", min_value=0.0)
+st.header("Cash IQ", text_alignment="center")
 
-with st.spinner("Retrieving saved cash floor...", show_time=True):
-    saved_cash_floor = retrieve_client_data(client)    
-cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
+col1, col2 = st.columns(2, gap="xlarge")
 
-if client in ["Trinity", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"]:
+with col2:
 
-    coa_file = st.file_uploader(
-        "Upload COA file", type=["xlsx", "xls"]
+    client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"])
+
+    initial_cash_balance = st.number_input("Enter initial cash balance", min_value=0.0)
+
+    date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
+
+with col1:
+
+    if client in ["Trinity", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"]:
+
+        coa_file = st.file_uploader(
+            "Upload COA file", type=["xlsx", "xls"]
+        )
+
+    if client == "Luna":
+
+        coa_file = st.file_uploader(
+            "Upload COA file", type=["xlsx", "xls"]
+        )
+        
+        ar_file = st.file_uploader(
+            "Upload AR Aging file", type=["xlsx", "xls"]
+        )
+
+        vendor_file = st.file_uploader(
+            "Upload Balance sheet file (optional)", type=["xlsx", "xls"]
+        )
+        
+    gl_file = st.file_uploader(
+        "Upload GL file", type=["xlsx", "xls"]
     )
 
-if client == "Luna":
-
-    coa_file = st.file_uploader(
-        "Upload COA file", type=["xlsx", "xls"]
-    )
-    
-    ar_file = st.file_uploader(
-        "Upload AR Aging file", type=["xlsx", "xls"]
+    previous_cashiq_file = st.file_uploader(
+        "Upload previous Cash IQ file", type=["xlsx", "xls"]
     )
 
-    vendor_file = st.file_uploader(
-        "Upload Balance sheet file (optional)", type=["xlsx", "xls"]
-    )
-    
-gl_file = st.file_uploader(
-    "Upload GL file", type=["xlsx", "xls"]
-)
+with col2:
+    with st.spinner("Retrieving saved cash floor...", show_time=True):
+        saved_cash_floor = retrieve_client_data(client)    
+    cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
 
-previous_cashiq_file = st.file_uploader(
-    "Upload previous Cash IQ file", type=["xlsx", "xls"]
-)
-
-date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
 
 if client == "Parisi":
     condition = gl_file and date_strt
@@ -125,10 +133,24 @@ if st.session_state.excel_bytes is not None:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         icon=":material/download:",
     )
+
+    official_client_name_mapping = {
+        "Trinity": "Trinity Logistics", 
+        "Parisi": "Parisi", 
+        "Luna": "Luna Locums", 
+        "Strivewell": "Strivewell", 
+        "Continuum": "Continuum", 
+        "SupafitGrow": "SupafitGrow", 
+        "Gamechanger": "Gamechanger"
+    }
+
+    client_name = official_client_name_mapping.get(client, client)
+
+    client_name = st.text_input("Client Name for summary", value=client_name)
     summary_button = st.button("Get summary")
     if summary_button:
         with st.spinner("Getting AI summary...", show_time=True):
-            st.session_state.summary_bytes = get_summary(client, date_strt, output_file_name)
+            st.session_state.summary_bytes = get_summary(client_name, date_strt, output_file_name)
 
     if st.session_state.summary_bytes is not None:
 

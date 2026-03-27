@@ -1,5 +1,6 @@
 from src.classify_transactions import get_classifications
-
+from src.ai_summary import get_summary
+    
 
 #--------------------------------------------------
 #        Test Inflows/Outflows Classification
@@ -31,5 +32,5 @@ Dues & subscription
 """
 
 # Real unit tests coming soon!
-def tesT_outflows_classification():
-    assert True
+#def tesT_outflows_classification():
+#    assert True
