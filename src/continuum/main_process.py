@@ -1,6 +1,6 @@
 from src.trinity.preprocessing import week_windows
 from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
-from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments
+from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments, get_txn_hist_per_cc
 from src.trinity.postprocessing import get_combined_bank, get_cash_balance, get_cc_output_sheets, write_output_excel
 from src.general_preprocessing import load_and_clean_coa, load_and_clean_gl
 from src.general_postprocessing import build_inflows_outflows
@@ -30,6 +30,7 @@ def get_continuum_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cas
     payment_event_dates, ccpay_kind, dom_mode = project_cc_payments(hist_ccpay_bank, asof_date, PROJ_WEEK1_START, proj_end_date, cadence_start, cadence_end)
     cc_payment_schedule, cc_payment_alloc = allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_dates, CC_MIX_ROLLING_WEEKS, 
                                                               proj_week_starts, idx_names, ccpay_kind, dom_mode)
+    cc_txn_df_dict = get_txn_hist_per_cc(cc_spend_txn, date_strt)
 
     # Now combine the information to get the excel output
     combined_full = get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts, cc_payment_alloc)
@@ -46,6 +47,6 @@ def get_continuum_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cas
     
     write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
-                       cc_spend_txn, cc_payment_schedule, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)
+                       cc_spend_txn, cc_payment_schedule, cc_txn_df_dict, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)
     
     return inflows_by_cat, outflows_by_cat

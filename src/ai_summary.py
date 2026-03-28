@@ -17,6 +17,8 @@ load_dotenv()
 if os.getenv("OPENAI_API_KEY") is None:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
+if os.getenv("SERVER") is None:
+    os.environ["SERVER"] = st.secrets["SERVER"]
 
 
 class InsightSuggestion(BaseModel):
@@ -55,8 +57,16 @@ def send_data_to_llm(projection_data, date, data_path):
         {"role": "user", "content": prompt}
     ]
 
+    server = os.getenv("SERVER")
+    if server == 'qa':
+        model = "gpt-5.4-mini"
+    elif server == 'main':
+        model = "gpt-5.4"
+    else:
+        model = "gpt-5.4-nano"
+
     response = client.responses.parse(
-        model="gpt-5",
+        model=model,
         input=messages,
         tools=[{"type":"code_interpreter", "container": {"type":"auto", "file_ids":[file_id]}}],
         text_format=CashIQSummary,

@@ -67,7 +67,7 @@ def get_classifications(client, inflows_present, outflows_present):
     key_mapping_inflows = client_data["key_mapping_inflows"]
     key_mapping_outflows = client_data["key_mapping_outflows"]
 
-    if client in ["trinity", "strivewell", "luna"]:
+    if client in ["trinity", "strivewell", "luna", "continuum"]:
         inflows_format = TrinityInflowsFormat
         outflows_format = TrinityOutflowsFormat
     elif client == "parisi":
