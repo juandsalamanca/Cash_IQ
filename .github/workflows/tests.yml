@@ -13,6 +13,7 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GSHEET_URL: ${{ secrets.GSHEET_URL }}
+      SERVER: ${{ secrets.SERVER }}
 
     steps:
       - name: Checkout repo
