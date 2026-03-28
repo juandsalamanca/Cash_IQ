@@ -1,6 +1,9 @@
 from src.trinity.preprocessing import monday_week_start
 from src.projections import classify_cadence, week_of_month, project_weekly_pattern
 import pandas as pd
+from dateutil.parser import parse
+from datetime import timedelta
+
 
 
 def begin_cc(gl, bank_accounts, cc_accounts):
@@ -218,3 +221,30 @@ def allocate_payments(cc_spend_proj_cat, cc_spend_cat_pivot_top, payment_event_d
     )
 
     return cc_payment_schedule, cc_payment_alloc
+
+def get_txn_hist_per_cc(cc_spend_txn: pd.DataFrame, date_strt: str)  -> dict[str: pd.DataFrame]:
+
+    cc_spend_txn = cc_spend_txn.sort_values(["account_name","date"])
+    unique_card_names = set(cc_spend_txn["account_name"].to_list())
+
+    parsed_date_strt = parse(date_strt)
+    history_start_date = parsed_date_strt - timedelta(days=90) 
+
+    cc_transactions = {}
+
+    for card in unique_card_names:
+
+
+        # Filter by CC
+        card_df = cc_spend_txn[cc_spend_txn["account_name"]==card]
+        # Filter by date, just 3 months back
+        card_df = card_df[card_df["date"] > history_start_date]
+        # Format date columns
+        card_df["date"] = card_df["date"].dt.date
+        card_df["week_start"] = card_df["week_start"].dt.date
+        # Dispose of the useless columns:
+        card_df = card_df.drop(columns=["account_section", "txn_type", "num", "account_name"])
+
+        cc_transactions[card] = card_df
+
+    return cc_transactions
