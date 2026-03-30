@@ -243,7 +243,8 @@ def get_txn_hist_per_cc(cc_spend_txn: pd.DataFrame, date_strt: str)  -> dict[str
         card_df["date"] = card_df["date"].dt.date
         card_df["week_start"] = card_df["week_start"].dt.date
         # Dispose of the useless columns:
-        card_df = card_df.drop(columns=["account_section", "txn_type", "num", "account_name"])
+        del_cols = ["account_section", "txn_type", "num", "account_name", "split_type", "split_detail_type", "split_account", "week_start"]
+        card_df = card_df.drop(columns=del_cols)
 
         cc_transactions[card] = card_df
 
