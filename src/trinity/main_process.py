@@ -5,9 +5,12 @@ from src.trinity.postprocessing import get_combined_bank, get_cash_balance, get_
 from src.general_preprocessing import load_and_clean_coa, load_and_clean_gl
 from src.general_postprocessing import build_inflows_outflows
 from src.classify_transactions import get_classifications
+from src.ap_aging import integrate_current_debt
+import traceback
+import streamlit as st
 
 
-def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
+def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None):
 
     # TODO: Need to pass all the global vars properly as params through the functions
     # First initialize the DFs and vars we need
@@ -42,6 +45,14 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_
 
     cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present = get_cc_output_sheets(cc_spend_cat_pivot_top, cc_spend_proj_cat, 
                                                                                                     cc_payment_alloc, all_week_starts, proj_week_starts)
+    
+    if AP_AGING is not None:
+        try:
+            integrate_current_debt(date_strt, AP_AGING, outflows_present, cc_spend_txn)
+        except Exception as e:
+            traceback.print_exc()
+            st.warning(f"Error incorporating debt from AP Aging: {str(e)}")
+
     
     inflows_by_cat, outflows_by_cat = get_classifications("trinity", inflows_present, outflows_present)
     

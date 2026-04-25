@@ -9,7 +9,7 @@ from src.classify_transactions import get_classifications
 
 
 
-def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None):
+def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None):
 
     # TODO: 
     # First initialize the DFs and vars we need

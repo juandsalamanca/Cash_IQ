@@ -78,6 +78,10 @@ with col1:
         "Upload GL file", type=["xlsx", "xls"]
     )
 
+    ap_aging = st.file_uploader(
+        "Upload AP file", type=["xlsx", "xls"]
+    )
+
     previous_cashiq_file = st.file_uploader(
         "Upload previous Cash IQ file", type=["xlsx", "xls"]
     )
@@ -112,7 +116,7 @@ if process:
             st.session_state.excel_bytes = get_cash_iq(client=client, COA_PATH=coa_file, GL_PATH=gl_file, 
                                                        date_strt=date_strt, OUTPUT_XLSX=output_file_name, 
                                                        previous_cashiq_file=previous_cashiq_file, initial_cash_balance=initial_cash_balance, 
-                                                       AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor)
+                                                       AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor, AP_AGING=ap_aging)
         except ValueError as e:
             st.error(str(e))
         

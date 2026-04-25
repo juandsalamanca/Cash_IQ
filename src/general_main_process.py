@@ -14,7 +14,7 @@ from src.continuum.main_process import get_continuum_cash_iq
 @st.cache_data(show_spinner=False)
 def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cashiq_file, 
                 initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, 
-                AR_BUCKET_ASSUMPTIONS=None, cash_floor=0.0):
+                AR_BUCKET_ASSUMPTIONS=None, cash_floor=0.0, AP_AGING=None):
     
     
     client_map = {
@@ -34,9 +34,9 @@ def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
         
     inflows_by_cat, outflows_by_cat = main_function(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, 
                 initial_cash_balance=initial_cash_balance, AR_AGING_PATH=AR_AGING_PATH, VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, 
-                AR_BUCKET_ASSUMPTIONS=AR_BUCKET_ASSUMPTIONS)
-
+                AR_BUCKET_ASSUMPTIONS=AR_BUCKET_ASSUMPTIONS, AP_AGING=AP_AGING)
     
+
     if previous_cashiq_file is not None:
         try:
             my_bar.progress(40, text="Learning from previous CashIQ report...")
