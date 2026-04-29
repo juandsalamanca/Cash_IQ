@@ -12,6 +12,43 @@ if os.getenv("OPENAI_API_KEY") is None:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 
+class MisplacedItems(BaseModel):
+    misplaced: list[str]
+
+def get_misplaced_outflow_inflow(transaction_list, txn_type):
+    client = OpenAI()
+
+    if txn_type == "inflows":
+        oposite = "outflows"
+    else:
+        oposite = "inflows"
+
+    prompt = f"""I will provide for you a list of transaction labels corresponding to  {txn_type}. You need to check if there is anything in that list
+    that could correspond to the {oposite} list. If there are items were indeed placed in the wrong list, return them separated by commas. 
+    Only return items if you have over 90% confidence of them being misplaced. I'll give you a couple of examples:
+    Anything named 'Accounts Payable' should be an outflow.
+    Anything named 'AR Collected' should be an inflow.
+    
+    Remember, do NOT return anything that you are not highly confident of.
+    Do not return anything but the misplaced items. If none were misplaced (not confident of any of them), return empty string.
+    
+    Here's the list of transactions:
+    {transaction_list}"""
+
+    response = client.responses.parse(
+    model="gpt-4.1",
+    temperature=0,
+    input=prompt,
+    text_format=MisplacedItems
+    )
+
+    json_output = json.loads(response.output_parsed.model_dump_json())
+
+    print(json_output)
+
+    return json_output['misplaced']
+
+
 class TrinityInflowsFormat(BaseModel):
     collected: list[str]
     line_credit: list[str]
@@ -80,12 +117,23 @@ def get_classifications(client, inflows_present, outflows_present):
         inflows_list = inflows_present.index.get_level_values('split_account').to_list()
     else:
         inflows_list = inflows_present.index.to_list()
-    inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
 
     if isinstance(outflows_present.index, pd.core.indexes.multi.MultiIndex):
         outflows_list = outflows_present.index.get_level_values('split_account').to_list()
     else:
         outflows_list = outflows_present.index.to_list()
+
+    misplaced_inflows = get_misplaced_outflow_inflow(inflows_list, 'inflows')
+    misplaced_outflows = get_misplaced_outflow_inflow(outflows_list, 'outflows')
+
+    if misplaced_inflows:
+        inflows_list = [item for item in inflows_list if item not in misplaced_inflows]
+        outflows_list.extend(misplaced_inflows)
+    if misplaced_outflows:
+        outflows_list = [item for item in outflows_list if item not in misplaced_outflows]
+        inflows_list.extend(misplaced_outflows)
+
+    inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
     outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
 
     return inflows_by_cat, outflows_by_cat

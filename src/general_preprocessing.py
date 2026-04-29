@@ -28,6 +28,7 @@ def load_and_clean_coa(COA_PATH):
     coa["detail_type"] = safe_strip(coa["detail_type"].fillna(""))
 
     bank_accounts = set(coa.loc[coa["type"].eq("Bank"), "full_name"])
+    bank_accounts.add("Undeposited Funds")
     cc_accounts   = set(coa.loc[coa["type"].eq("Credit Card"), "full_name"])
 
     return coa, bank_accounts, cc_accounts

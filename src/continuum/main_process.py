@@ -10,7 +10,8 @@ import traceback
 import streamlit as st
 
 
-def get_continuum_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None):
+def get_continuum_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, 
+                          VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None, BALANCE=None):
 
     # TODO: Need to pass all the global vars properly as params through the functions
     # First initialize the DFs and vars we need
@@ -55,15 +56,12 @@ def get_continuum_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cas
             st.warning(f"Error incorporating debt from AP Aging: {str(e)}")
 
     inflows_by_cat, outflows_by_cat = get_classifications("trinity", inflows_present, outflows_present)
-    #print(inflows_present)
-    #print(inflows_by_cat)
+
     
     write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
                        cc_spend_txn, cc_payment_schedule, cc_txn_df_dict, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)
     
-    
-
 
     
-    return inflows_by_cat, outflows_by_cat
+    return inflows_by_cat, outflows_by_cat, cc_accounts

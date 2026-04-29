@@ -9,7 +9,8 @@ from src.classify_transactions import get_classifications
 
 
 
-def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None):
+def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_balance=0.0, AR_AGING_PATH=None, 
+                     VENDOR_SUMMARY_PATH=None, AR_BUCKET_ASSUMPTIONS=None, AP_AGING=None, BALANCE=None):
 
     # TODO: 
     # First initialize the DFs and vars we need
@@ -45,4 +46,4 @@ def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_bal
                        OUTPUT_XLSX=OUTPUT_XLSX, week1_cash_balance=initial_cash_balance, VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, 
                        ar=ar, ar_assumptions_df=ar_assumptions_df)
 
-    return inflows_by_cat, outflows_by_cat
+    return inflows_by_cat, outflows_by_cat, cc_accounts

@@ -44,7 +44,7 @@ st.header("Cash IQ", text_alignment="center")
 
 col1, col2 = st.columns(2, gap="xlarge")
 
-with col2:
+with col1:
 
     client = st.selectbox("Select the client", ["Trinity", "Parisi", "Luna", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"])
 
@@ -52,7 +52,19 @@ with col2:
 
     date_strt = str(st.date_input("Select projection start date")).replace("/", "-")
 
-with col1:
+    with st.spinner("Retrieving saved cash floor...", show_time=True):
+        saved_cash_floor = retrieve_client_data(client)    
+    cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
+
+    gl_file = st.file_uploader(
+        "Upload GL file", type=["xlsx", "xls"]
+    )
+
+    previous_cashiq_file = st.file_uploader(
+        "Upload previous Cash IQ file", type=["xlsx", "xls"]
+    )
+
+with col2:
 
     if client in ["Trinity", "Strivewell", "Continuum", "SupafitGrow", "Gamechanger"]:
 
@@ -74,23 +86,14 @@ with col1:
             "Upload Balance sheet file (optional)", type=["xlsx", "xls"]
         )
         
-    gl_file = st.file_uploader(
-        "Upload GL file", type=["xlsx", "xls"]
-    )
 
     ap_aging = st.file_uploader(
         "Upload AP file", type=["xlsx", "xls"]
     )
 
-    previous_cashiq_file = st.file_uploader(
-        "Upload previous Cash IQ file", type=["xlsx", "xls"]
+    balance = st.file_uploader(
+        "Upload Balance sheet", type=["xlsx", "xls"]
     )
-
-with col2:
-    with st.spinner("Retrieving saved cash floor...", show_time=True):
-        saved_cash_floor = retrieve_client_data(client)    
-    cash_floor = st.number_input("Enter cash floor", value=saved_cash_floor, min_value=0.0)
-
 
 if client == "Parisi":
     condition = gl_file and date_strt
@@ -116,7 +119,8 @@ if process:
             st.session_state.excel_bytes = get_cash_iq(client=client, COA_PATH=coa_file, GL_PATH=gl_file, 
                                                        date_strt=date_strt, OUTPUT_XLSX=output_file_name, 
                                                        previous_cashiq_file=previous_cashiq_file, initial_cash_balance=initial_cash_balance, 
-                                                       AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor, AP_AGING=ap_aging)
+                                                       AR_AGING_PATH=ar_file, VENDOR_SUMMARY_PATH=vendor_file, cash_floor=cash_floor, AP_AGING=ap_aging,
+                                                       BALANCE=balance)
         except ValueError as e:
             st.error(str(e))
         
