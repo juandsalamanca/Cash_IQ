@@ -32,9 +32,19 @@ def erase_null_cc_projections(null_balances, OUTPUT_XLSX):
         print(accnt)
         if accnt in null_balances:
             print("Found it")
-            idx = output_df.index[output_df["Line Item"] == accnt]
+            idx = output_df.index[output_df["Line Item"] == accnt].item()
             print(idx)
-            output_df = output_df.drop(index=idx)
+            # We need to see if there is any transactions in the past weeks.
+            # If there are, we just turn all prjections to 0. If not, we drop the row.
+            past_txn = False
+            for j in range(3, 7):
+                if output_df.iloc[idx, j] != 0:
+                    past_txn = True
+            if past_txn:
+                for j in range(7, 20):
+                    output_df.iloc[idx, j] = 0
+            else:
+                output_df = output_df.drop(index=idx)
 
     print(output_df.tail(10))
 
