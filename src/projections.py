@@ -1,5 +1,9 @@
 import pandas as pd
 import numpy as np
+from openai import OpenAI
+from pydantic import BaseModel
+import json
+import statistics
 from src.general_preprocessing import monday_week_start
 
 def week_of_month(dt: pd.Timestamp) -> int:
@@ -191,8 +195,109 @@ def replicate_last_year_transactions(s_hist, proj_week_starts):
     proj_series = pd.Series(projection_list, index=proj_week_starts)
     return proj_series
 
+class PersistentTxn(BaseModel):
+    persistent: bool
+    proyected_value: float
 
-def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_week_starts, PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names, cc_accounts=None):
+# This function ended up being useless in the face of  the new adjust_for_truning_events function.
+def detect_persitent_txn_changes(key, s_hist):
+    client = OpenAI()
+
+    prompt = f"""I'll give you a list of transactions through time (one per week). All of them correspond to a certain label, a certain account.
+    You need to determine if there has been an abrupt change in the value of the transactions and if it is one that might be persistent in the long term.
+    You need to use the label and the transactions to judge this. For example, if there is a sudden drop or increase in a list of transactions called
+    'Payroll', then it makes sense to assume that there were some layoffs or hires. This would indicate that the change is going to persist through time.
+    Same for sudden significant changes in transactions called 'Income', 'CC payments'. In general, whenever you see a really sharp change in transactions.
+    But if you see some random fluctuations on an acount called 'Chase 974', then we can assume it's not something persistent. You need to return two values:
+    a boolean called persistent, which determines if there was a persitent change or not. And a float called proyected_value, which, in case the boolean is True,
+    will be the value that needs to be proyected for future weeks. If the boolean is False, then proyected _value should be 0.
+    
+    Here's the label for the account: {key}
+
+    And here's the transaction history:
+    {s_hist}"""
+
+    response = client.responses.parse(
+        model="gpt-5.4",
+        input=prompt,
+        text_format=PersistentTxn,
+        #reasoning={"effort": "high"}
+    )
+
+    return json.loads(response.output_parsed.model_dump_json())
+
+class PersistentTxn(BaseModel):
+    account_type: str
+
+def detect_type_of_account(key):
+    client = OpenAI()
+
+    prompt = f"""I'll give you an account name I got from the transaction detail document exported by Quickbooks from a certain company.
+    You need to determine if the account represents an Inflow (Positive transactions, money coming in), Outflow (Negative transactions, money going out)
+    or Mix (Money could be flowing in or out of the company). I'll provide some guiding examples. Anything called 'Income' should eb an Inflow and 
+    anything called 'Payroll' should be an Outflow. You should only output Inflow or Outflow if you're over 90% certainty of this assesment. Everything else
+    should called Mix. You need to out put this in JSON format with one field: account_type.
+    The value of that field will be a string that can be either 'Inflow', 'Outflow' or 'Mix'.
+
+    Remember, do not output anythin different than Mix if you're not over 90% certain.
+    
+    Here's the account name:
+    {key}"""
+
+    response = client.responses.parse(
+        model="gpt-5.4",
+        input=prompt,
+        text_format=PersistentTxn,
+        #reasoning={"effort": "high"}
+    )
+
+    json_object = json.loads(response.output_parsed.model_dump_json())
+    print(key)
+    print(json_object)
+
+    return json_object['account_type']
+
+def adjust_for_truning_events(sample):
+
+    sensibility = 6
+        
+    m_list = []
+    std_list = []
+    # Window needs to be at least len 4 to catch monthly transactions (1 week per data point)
+    window_len = 4
+    turning_event_start = 0
+    turning_event = []
+    for i in range(len(sample)-window_len):
+        window = sample[i:i+window_len]
+        m = statistics.mean(window)
+        std = statistics.stdev(window)
+        m_list.append(m)
+        std_list.append(std)
+        if i> 0:
+            prev_m = m_list[-2]
+            prev_std = std_list[-2]
+        else:
+            last_stable_mean = m
+            last_stable_std = std
+
+        # Only record one turning event
+        if abs(m) > abs(last_stable_mean) + sensibility*abs(last_stable_std):
+            if turning_event_start==0:
+                turning_event_start = i
+                last_stable_mean = prev_m
+                last_stable_std = prev_std
+            turning_event.append(sample[i])
+        else:
+            last_stable_mean = m
+            last_stable_std = std
+    if len(turning_event) > 4:
+        print("TURNING EVENT DETECTED")
+        cropped_sample = sample[turning_event_start+2:]
+        return cropped_sample
+    else:
+        return sample
+
+def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, cc_accounts, proj_week_starts, PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names):
 
     # =========================
     # PROJECT BANK CASH LINES (non-CC-payment lines + CC payments separately)
@@ -205,6 +310,7 @@ def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_we
         hist_noncc_bank = hist_bank_tx[~hist_bank_tx["split_account"].isin(cc_accounts)].copy()
     else:
         hist_noncc_bank = hist_bank_tx.copy()
+        hist_ccpay_bank = []
 
     # Build projection matrix for all bank lines
     proj_bank = pd.DataFrame(0.0, index=bank_actual_pivot.index, columns=proj_week_starts)
@@ -212,6 +318,17 @@ def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_we
     for key, df_line in hist_noncc_bank.groupby(idx_names):
         df_line = df_line.sort_values("date")
         s_hist = build_weekly_series(df_line[["date","amount"]], hist_week_starts)
+        # TODO: Take this line out and have AI determine if this an account that should be inflow (all positive), outflow (All engative) or leave as is.
+        if "Income:Membership Fee Income" in key:
+            s_hist = abs(s_hist)
+        account_type = detect_type_of_account(key)
+
+        if account_type == 'Inflow':
+            s_hist = abs(s_hist)
+        elif account_type == 'Outflow':
+            s_hist = -abs(s_hist)
+
+        s_hist = adjust_for_truning_events(s_hist)
 
         # If series exists and more than half values are non zero, return true, else return false
         if is_weekly_flow(s_hist):
@@ -243,6 +360,16 @@ def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_we
                 # If all medians are zero we replicate last year tendencies
                 else:
                     proj_series = replicate_last_year_transactions(s_hist, proj_week_starts)
+
+        # Detect abrupt persistent changes (e.g. Payroll increases or drops due to hires or layoffs)
+        #persistency = detect_persitent_txn_changes(key, s_hist)
+        persistency = {"persistent":[]}
+        
+        if persistency['persistent']:
+ 
+            for idx in proj_series.index:
+                if proj_series[idx] != 0.0:
+                    proj_series[idx] = persistency['proyected_value']
 
         if key in proj_bank.index:
             proj_bank.loc[key, proj_week_starts] = proj_series.values

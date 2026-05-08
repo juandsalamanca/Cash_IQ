@@ -85,8 +85,8 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
     outflows_tbl = pd.DataFrame(out_rows, columns=combined_full.columns)
     outflows_tbl.index.names = ['split_account', 'split_type', 'split_detail_type']
 
-    inflows_tbl  = collapse_other(inflows_tbl,  top_inflows,  "Other Inflows",  idx_names)
-    outflows_tbl = collapse_other(outflows_tbl, top_outflows, "Other Outflows", idx_names)
+    #inflows_tbl  = collapse_other(inflows_tbl,  top_inflows,  "Other Inflows",  idx_names)
+    #outflows_tbl = collapse_other(outflows_tbl, top_outflows, "Other Outflows", idx_names)
 
     # Presentation: inflows positive; outflows positive
     inflows_present  = inflows_tbl.copy()
@@ -97,11 +97,11 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
 
     # Account for any empty split account, marked as unmapped
     inflows_present.index = inflows_present.index.set_levels(
-        ['Unmapped' if level == '' else level for level in inflows_present.index.levels[0]],
+        ['Other Inflows' if level == '' else level for level in inflows_present.index.levels[0]],
         level=0
     )
     outflows_present.index = outflows_present.index.set_levels(
-        ['Unmapped' if level == '' else level for level in outflows_present.index.levels[0]],
+        ['Other Outflows' if level == '' else level for level in outflows_present.index.levels[0]],
         level=0
     )
    
@@ -109,7 +109,7 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
 
 def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows,
                         total_outflows, cc_spend_proj_display=None, cc_spend_actual_display=None, cc_payment_alloc_present=None, cc_spend_txn=None, 
-                        cc_payment_schedule=None, beg_bal_series=None, end_bal_series=None, PROJ_WEEK1_START="", OUTPUT_XLSX="", week1_cash_balance=0.0,
+                        cc_payment_schedule=None, cc_txn_df_dict=None, beg_bal_series=None, end_bal_series=None, PROJ_WEEK1_START="", OUTPUT_XLSX="", week1_cash_balance=0.0,
                         VENDOR_SUMMARY_PATH=None, ar=None, ar_assumptions_df=None):
     # =========================
     # WRITE OUTPUT EXCEL
@@ -140,8 +140,11 @@ def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows
             cc_payment_schedule.to_excel(writer, sheet_name="CC Payments - Schedule", index=False)
             cc_payment_alloc_present.reset_index().to_excel(writer, sheet_name="Cash - CC Pay Allocation", index=False)
 
+        if cc_txn_df_dict is not None:
+            for cc_df_name in cc_txn_df_dict:
+                cc_df = cc_txn_df_dict[cc_df_name]
+                cc_df.to_excel(writer, sheet_name=cc_df_name, index=False)
         
-
         proj_sheet, inflow_section_indexes, outflow_section_indexes, cash_balance_indexes = build_projections_table(all_week_starts, 
                                                                                                                     inflows_by_cat, 
                                                                                                                     outflows_by_cat, 

@@ -23,8 +23,8 @@ def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_bal
     # Start processing the cash data
     bank_tx, beginning_cash_balance = begin_cash(gl, coa, PROJ_WEEK1_START, bank_accounts)
     bank_actual_pivot, idx_names = buil_actual_weekly_cash(bank_tx, all_week_starts)
-    _, proj_bank = project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, proj_week_starts, 
-                                              PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names, cc_accounts)
+    _, proj_bank = project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, cc_accounts, proj_week_starts, 
+                                              PROJ_WEEK1_START, proj_end_date, hist_week_starts, idx_names, )
     
     combined = get_combined_bank(proj_bank, bank_actual_pivot, actual_week_starts, proj_week_starts, all_week_starts)
 
@@ -39,7 +39,7 @@ def get_luna_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_bal
     
     beg_bal_series, end_bal_series = get_cash_balance(total_inflows, total_outflows, beginning_cash_balance, all_week_starts)
 
-    inflows_by_cat, outflows_by_cat = get_classifications("luna", inflows_present, outflows_present)
+    inflows_by_cat, outflows_by_cat, inflows_present, outflows_present = get_classifications("luna", inflows_present, outflows_present)
 
     write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, beg_bal_series=beg_bal_series, end_bal_series=end_bal_series, PROJ_WEEK1_START=PROJ_WEEK1_START, 

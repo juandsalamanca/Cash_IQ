@@ -60,6 +60,7 @@ def load_and_clean_gl(GL_PATH, coa):
     )
 
     gl["account_name"] = gl["account_section"].ffill()
+    gl["split_account"] = gl["split_account"].fillna(gl["name"])
     gl["account_name"] = safe_strip(gl["account_name"].fillna(""))
     gl["split_account"] = safe_strip(gl["split_account"].fillna(""))
 

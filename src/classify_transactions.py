@@ -36,7 +36,7 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
     {transaction_list}"""
 
     response = client.responses.parse(
-    model="gpt-4.1",
+    model="gpt-5.4",
     temperature=0,
     input=prompt,
     text_format=MisplacedItems
@@ -82,7 +82,7 @@ def classify_transactions(transaction_list, transaction_type, categories, key_ma
     """
 
     response = client.responses.parse(
-    model="gpt-4.1",
+    model="gpt-5.4",
     temperature=0,
     input=prompt,
     text_format=output_format
@@ -93,6 +93,30 @@ def classify_transactions(transaction_list, transaction_type, categories, key_ma
     new_dict = {key_mapping[k]: v for k, v in json_output.items()}
     return new_dict
 
+def merge_transactions_with_same_label(label, original_location, inflows_present, outflows_present):
+
+    """ 
+    We find the misplaced row, save it, drop it from the original DF and then sum its values with the 
+    corresponding one in the destination DF.
+    """
+
+    if original_location == "inflows":
+        origin = inflows_present
+        destination = outflows_present
+    else:
+        origin = outflows_present
+        destination = inflows_present
+
+    for idx in origin.index:
+        if label in idx:
+            print(idx)
+            break
+    row = origin.loc[idx]
+    origin = origin.drop(index=idx)
+    destination.loc[idx] += row
+    return origin, destination
+
+    
 def get_classifications(client, inflows_present, outflows_present):
 
     with open("client_data.json", "r") as f:
@@ -123,31 +147,50 @@ def get_classifications(client, inflows_present, outflows_present):
     else:
         outflows_list = outflows_present.index.to_list()
 
+
     misplaced_inflows = get_misplaced_outflow_inflow(inflows_list, 'inflows')
     misplaced_outflows = get_misplaced_outflow_inflow(outflows_list, 'outflows')
 
     if misplaced_inflows:
         inflows_list = [item for item in inflows_list if item not in misplaced_inflows]
+        # We check if any of the misplaced inflows are already in the outflows
+        repeated = [item for item in misplaced_inflows if item in outflows_list]
+        if repeated:
+            # We take out the repeated items from the misplaced list
+            misplaced_inflows = [item for item in misplaced_inflows if item not in repeated]
+            # Now drop the repeated items from the inflows and sum them with the appropriate row in the outflows
+            for label in repeated:
+                inflows_present, outflows_present = merge_transactions_with_same_label(label, 'inflows', inflows_present, outflows_present)
         outflows_list.extend(misplaced_inflows)
+
     if misplaced_outflows:
         outflows_list = [item for item in outflows_list if item not in misplaced_outflows]
+         # We check if any of the misplaced outflows are already in the inflows
+        repeated = [item for item in misplaced_outflows if item in inflows_list]
+        if repeated:
+            # We take out the repeated items from the misplaced list
+            misplaced_outflows = [item for item in misplaced_outflows if item not in repeated]
+            # Now drop the repeated items from the outflows and sum them with the appropriate row in the inflows
+            for label in repeated:
+                outflows_present, inflows_present = merge_transactions_with_same_label(label, 'outflows', inflows_present, outflows_present)
+
         inflows_list.extend(misplaced_outflows)
 
     inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
     outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
 
-    return inflows_by_cat, outflows_by_cat
+    return inflows_by_cat, outflows_by_cat, inflows_present, outflows_present
 
 
 if __name__ == "__main__":
     #pass
     
-    inflow_categories = """collected: Any AR Customer or Account that is a Income account.
+    inflow_categories = """collected: Any AR Customer or Account that is a Income account. Any proper names from cusotmers should also be under this category.
     line_credit: Any inflow that is related to a Liability account
     other: Any account labeled as Other Income."""
 
-    outflow_categories = """expenses_accounts_payable: Any outflow that is from AP vendors, Expense, or an Other expense account
-    credit_cards_loans: Any account that is Credit card or Liability.
+    outflow_categories = """expenses_accounts_payable: Any outflow that is from AP vendors (account payable), Expense, or an Other expense account
+    credit_cards_loans: Any account that is Credit card or Loan.
     owner_expenses: Any account that is an equity account."""
 
     key_mapping_inflows = {'line_credit': 'Line of Credit Advances and Loan', 'other': 'Other Income', 'collected': 'AR Collected'}
@@ -166,6 +209,8 @@ if __name__ == "__main__":
             "strivewell":
             {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
             "luna":
+            {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
+            "continuum":
             {"inflow_categories": inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows},
             "parisi": 
             {"inflow_categories": parisi_inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": parisi_key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows}}

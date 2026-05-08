@@ -1,10 +1,11 @@
 from src.strivewell.preprocessing import week_windows
-from src.trinity.cash import begin_cash, buil_actual_weekly_cash, project_cash
+from src.trinity.cash import begin_cash, buil_actual_weekly_cash
 from src.trinity.credit_card import begin_cc, get_cc_debt_history, project_cc_debt, project_cc_payments, allocate_payments, get_txn_hist_per_cc
-from src.trinity.postprocessing import get_combined_bank, get_cash_balance, get_cc_output_sheets, write_output_excel
+from src.trinity.postprocessing import get_combined_bank, get_cc_output_sheets
 from src.general_preprocessing import load_and_clean_coa, load_and_clean_gl
-from src.general_postprocessing import build_inflows_outflows
+from src.general_postprocessing import build_inflows_outflows, get_cash_balance, write_output_excel
 from src.classify_transactions import get_classifications
+from src.projections import project_cash
 from src.ap_aging import integrate_current_debt
 import traceback
 import streamlit as st
@@ -52,7 +53,7 @@ def get_strivewell_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_ca
             traceback.print_exc()
             st.warning(f"Error incorporating debt from AP Aging: {str(e)}")
 
-    inflows_by_cat, outflows_by_cat = get_classifications("strivewell", inflows_present, outflows_present)
+    inflows_by_cat, outflows_by_cat, inflows_present, outflows_present = get_classifications("strivewell", inflows_present, outflows_present)
     write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows, 
                        total_outflows, cc_spend_proj_display, cc_spend_actual_display, cc_payment_alloc_present,
                        cc_spend_txn, cc_payment_schedule, cc_txn_df_dict, beg_bal_series, end_bal_series, PROJ_WEEK1_START, OUTPUT_XLSX, initial_cash_balance)

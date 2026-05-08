@@ -37,28 +37,21 @@ def sum_debt_to_projections(outflows_present, current_debt, cc_spend_txn):
             if due_date > col and due_date < next_col:
                 amount = current_debt["amount"][i]
                 accnt = current_debt["lender_accnt"][i]
-                print("Debt found!")
-                print("Amount:", amount)
-                print("Account:", accnt)
+
                 # First look if the split account is even in the cc_spend df so we can mapp it to the correct cc
                 if accnt in cc_spend_txn["split_account"]:
-                    print("Account found on the cc_spend df")
                     idx = cc_spend_txn["split_account"].index(accnt)
                     accnt_name = cc_spend_txn.loc["account_name", idx]
-                    print("Credit card accnt:", accnt_name)
                     # If the account is already in the outflows just sum the value
                     if accnt_name in outflows_present["split_account"]:
-                        print("CC already found on outflows")
                         outf_idx = outflows_present["split_account"].index(accnt_name)
                         outflows_present.loc[outf_idx, col] += amount
                     # If not, then create a new row full of zeros except for the scheduled payment
                     else:
-                        print("CC not found, adding new line")
                         outflows_present.loc[(accnt_name, 'Credit Card Payment', ''), :] = 0
                         outflows_present.loc[-1, col] += amount
 
                 else:
-                    print("split accont not found, adding new line")
                     outflows_present.loc[(accnt, 'Credit Card Payment', ''), :] = 0
                     outflows_present.loc[(accnt, 'Credit Card Payment', ''), col] += amount
 

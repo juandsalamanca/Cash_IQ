@@ -240,6 +240,7 @@ def get_summary(client_name, date, OUTPUT_XLSX):
         },
         "data": projections_json
     }
+    
     csv_path = OUTPUT_XLSX.replace(".xlsx", ".csv")
     projection_df.to_csv(csv_path, index=False)
     summary_json = send_data_to_llm(json.dumps(payload), date, csv_path).model_dump_json()
