@@ -286,12 +286,12 @@ def adjust_for_truning_events(sample):
                 turning_event_start = i
                 last_stable_mean = prev_m
                 last_stable_std = prev_std
-            turning_event.append(sample[i])
+            turning_event.append(sample.iloc[i])
         else:
             last_stable_mean = m
             last_stable_std = std
     if len(turning_event) > 4:
-        print("TURNING EVENT DETECTED")
+        #print("TURNING EVENT DETECTED")
         cropped_sample = sample[turning_event_start+2:]
         return cropped_sample
     else:

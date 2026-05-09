@@ -12,8 +12,13 @@ if os.getenv("OPENAI_API_KEY") is None:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 
+class MisplacedItem(BaseModel):
+    name: str
+    account_type: str
+    detail: str
+
 class MisplacedItems(BaseModel):
-    misplaced: list[str]
+    misplaced: list[MisplacedItem]
 
 def get_misplaced_outflow_inflow(transaction_list, txn_type):
     client = OpenAI()
@@ -23,14 +28,16 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
     else:
         oposite = "inflows"
 
-    prompt = f"""I will provide for you a list of transaction labels corresponding to  {txn_type}. You need to check if there is anything in that list
-    that could correspond to the {oposite} list. If there are items were indeed placed in the wrong list, return them separated by commas. 
-    Only return items if you have over 90% confidence of them being misplaced. I'll give you a couple of examples:
+    prompt = f"""I will provide for you a list of transaction labels corresponding to  {txn_type}. It will be a list of tuples of three items.
+    The first item in each tuple will be the name of the account, the second the account type and the third the account detail.
+    You need to check if there is anything in that list that could correspond to the {oposite} list. If there are items that were indeed placed 
+    in the wrong list, return them in a list inside a JSON with key 'misplaced'. Only return items if you have over 90% confidence of them being misplaced. 
+    I'll give you a couple of examples:
     Anything named 'Accounts Payable' should be an outflow.
     Anything named 'AR Collected' should be an inflow.
     
     Remember, do NOT return anything that you are not highly confident of.
-    Do not return anything but the misplaced items. If none were misplaced (not confident of any of them), return empty string.
+    Do not return anything but the misplaced tuples. If none were misplaced (not confident of any of them), return empty list.
     
     Here's the list of transactions:
     {transaction_list}"""
@@ -46,7 +53,9 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
 
     print(json_output)
 
-    return json_output['misplaced']
+    misplaced_list = [(item['name'], item['account_type'], item['detail']) for item in json_output['misplaced']]
+
+    return misplaced_list
 
 
 class TrinityInflowsFormat(BaseModel):
@@ -108,8 +117,8 @@ def merge_transactions_with_same_label(label, original_location, inflows_present
         destination = inflows_present
 
     for idx in origin.index:
-        if label in idx:
-            print(idx)
+        if label == idx:
+            print("Matching index:", idx)
             break
     row = origin.loc[idx]
     origin = origin.drop(index=idx)
@@ -137,25 +146,29 @@ def get_classifications(client, inflows_present, outflows_present):
     else:
         raise ValueError(f"Unsupported client: {client}")
 
-    if isinstance(inflows_present.index, pd.core.indexes.multi.MultiIndex):
-        inflows_list = inflows_present.index.get_level_values('split_account').to_list()
-    else:
-        inflows_list = inflows_present.index.to_list()
+    inflows_list = inflows_present.index.to_list()
+    outflows_list = outflows_present.index.to_list()
 
-    if isinstance(outflows_present.index, pd.core.indexes.multi.MultiIndex):
-        outflows_list = outflows_present.index.get_level_values('split_account').to_list()
-    else:
-        outflows_list = outflows_present.index.to_list()
+    print("Inflows:")
+    print(inflows_list)
+    print("Outflows:")
+    print(outflows_list)
 
 
     misplaced_inflows = get_misplaced_outflow_inflow(inflows_list, 'inflows')
     misplaced_outflows = get_misplaced_outflow_inflow(outflows_list, 'outflows')
+
+    print("Misplaced Inflows:")
+    print(misplaced_inflows)
+    print("Misplaced Outflows:")
+    print(misplaced_outflows)
 
     if misplaced_inflows:
         inflows_list = [item for item in inflows_list if item not in misplaced_inflows]
         # We check if any of the misplaced inflows are already in the outflows
         repeated = [item for item in misplaced_inflows if item in outflows_list]
         if repeated:
+            print("Repeated:", repeated)
             # We take out the repeated items from the misplaced list
             misplaced_inflows = [item for item in misplaced_inflows if item not in repeated]
             # Now drop the repeated items from the inflows and sum them with the appropriate row in the outflows
@@ -168,6 +181,7 @@ def get_classifications(client, inflows_present, outflows_present):
          # We check if any of the misplaced outflows are already in the inflows
         repeated = [item for item in misplaced_outflows if item in inflows_list]
         if repeated:
+            print("Repeated:", repeated)
             # We take out the repeated items from the misplaced list
             misplaced_outflows = [item for item in misplaced_outflows if item not in repeated]
             # Now drop the repeated items from the outflows and sum them with the appropriate row in the inflows
@@ -175,6 +189,16 @@ def get_classifications(client, inflows_present, outflows_present):
                 outflows_present, inflows_present = merge_transactions_with_same_label(label, 'outflows', inflows_present, outflows_present)
 
         inflows_list.extend(misplaced_outflows)
+
+    if not isinstance(inflows_list[0], str):
+        inflows_list = [item[0] for item in inflows_list]
+    if not isinstance(outflows_list[0], str):
+        outflows_list = [item[0] for item in outflows_list]
+
+    print("New Inflows:")
+    print(inflows_list)
+    print("New Outflows:")
+    print(outflows_list)
 
     inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
     outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
@@ -219,3 +243,7 @@ if __name__ == "__main__":
         json.dump(data, f)
 
     
+if __name__ == "__main__":
+    inflows = [('Other Inflows', 'Unmapped', ''), ('Benjamin Quirk', 'Unmapped', ''), ('Channel selling fees:Stripe fees', 'Cost of Goods Sold', 'Other Costs of Services - COS'), ('Christine Fujiyama', 'Unmapped', ''), ('Deferred Revenue', 'Other Current Liabilities', 'Deferred Revenue'), ('Income:Initiation/Onboarding Fee', 'Income', 'Service/Fee Income'), ('Income:Membership Fee Income', 'Income', 'Service/Fee Income'), ('Income:Other - Cancellations/Late Fees', 'Income', 'Discounts/Refunds Given'), ('Justin Dean', 'Unmapped', ''), ('Kevin Schwartz:31000 Contributions - Kevin Schwartz', 'Unmapped', ''), ('Matthew Stadtmauer', 'Unmapped', ''), ('Ruth Stadtmauer', 'Unmapped', '')]
+    response = get_misplaced_outflow_inflow(inflows, 'inflows')
+    print(response)
