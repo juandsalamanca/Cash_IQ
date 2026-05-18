@@ -234,7 +234,6 @@ def get_txn_hist_per_cc(cc_spend_txn: pd.DataFrame, date_strt: str)  -> dict[str
 
     for card in unique_card_names:
 
-
         # Filter by CC
         card_df = cc_spend_txn[cc_spend_txn["account_name"]==card]
         # Filter by date, just 3 months back

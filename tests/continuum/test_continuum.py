@@ -1,4 +1,5 @@
 from src.general_main_process import get_cash_iq
+import time
 
 def test_continuum_main():
     # Sample file paths (these should point to test files in your test environment)
@@ -20,6 +21,7 @@ def test_continuum_main():
                                 BALANCE=BALANCE)
 
     # Check that the output is a valid Excel file (starts with PK, which is the signature for ZIP files, and Excel files are ZIP archives)
+    time.sleep(5)
     assert excel_bytes[:2] == b'PK'
 
 if __name__ == "__main__":

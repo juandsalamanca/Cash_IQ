@@ -1,5 +1,5 @@
 from src.ai_summary import get_summary
-
+import time
 
 def test_summary():
 
@@ -9,4 +9,6 @@ def test_summary():
     OUTPUT_XLSX = "tests/strivewell/output.xlsx"
     client = "Strivewell"
     summary_bytes = get_summary(client, date_strt, OUTPUT_XLSX)
+
+    time.sleep(5)
     assert summary_bytes[:2] == b'PK'

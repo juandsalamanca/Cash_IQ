@@ -51,8 +51,6 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
 
     json_output = json.loads(response.output_parsed.model_dump_json())
 
-    print(json_output)
-
     misplaced_list = [(item['name'], item['account_type'], item['detail']) for item in json_output['misplaced']]
 
     return misplaced_list
@@ -149,12 +147,47 @@ def get_classifications(client, inflows_present, outflows_present):
     inflows_list = inflows_present.index.to_list()
     outflows_list = outflows_present.index.to_list()
 
-    print("Inflows:")
-    print(inflows_list)
-    print("Outflows:")
-    print(outflows_list)
 
 
+    post_correction = False
+
+    # Check if there are duplicate labels between inflows and outflows
+    repeated = [item for item in inflows_list if item in outflows_list]
+    # If so, we add " (Deposit)" to the label so we don't get duplicate indexes in the same projections table
+    # This will avoid getting an index malfunction (empty rows) when putting the rows in the build_projections_table funciton
+    if repeated:
+        repeated_set = set(repeated)
+        new_inflows_index = []
+
+        for idx in inflows_present.index.to_list():
+            if idx in repeated_set:
+                idx_list = list(idx)
+                idx_list[0] += " (Deposit)"
+                new_inflows_index.append(tuple(idx_list))
+            else:
+                new_inflows_index.append(idx)
+
+        if isinstance(inflows_present.index, pd.MultiIndex):
+            inflows_present.index = pd.MultiIndex.from_tuples(new_inflows_index, names=inflows_present.index.names)
+        else:
+            inflows_present.index = pd.Index(new_inflows_index, name=inflows_present.index.name)
+
+        inflows_list = new_inflows_index
+
+
+    if post_correction:
+        inflows_list, outflows_list, inflows_present, outflows_present = correct_misplaced_flows(inflows_list, 
+                                                                                                 outflows_list, 
+                                                                                                 inflows_present, 
+                                                                                                 outflows_present)
+
+    inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
+    outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
+
+    return inflows_by_cat, outflows_by_cat, inflows_present, outflows_present
+
+# Deprecated function, any misplacing should be taken care of in the projections logic with the detect_type_of_account function
+def correct_misplaced_flows(inflows_list, outflows_list, inflows_present, outflows_present):
     misplaced_inflows = get_misplaced_outflow_inflow(inflows_list, 'inflows')
     misplaced_outflows = get_misplaced_outflow_inflow(outflows_list, 'outflows')
 
@@ -178,7 +211,7 @@ def get_classifications(client, inflows_present, outflows_present):
 
     if misplaced_outflows:
         outflows_list = [item for item in outflows_list if item not in misplaced_outflows]
-         # We check if any of the misplaced outflows are already in the inflows
+        # We check if any of the misplaced outflows are already in the inflows
         repeated = [item for item in misplaced_outflows if item in inflows_list]
         if repeated:
             print("Repeated:", repeated)
@@ -199,12 +232,7 @@ def get_classifications(client, inflows_present, outflows_present):
     print(inflows_list)
     print("New Outflows:")
     print(outflows_list)
-
-    inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
-    outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
-
-    return inflows_by_cat, outflows_by_cat, inflows_present, outflows_present
-
+    return inflows_list, outflows_list, inflows_present, outflows_present
 
 if __name__ == "__main__":
     #pass

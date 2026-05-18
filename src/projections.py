@@ -229,20 +229,23 @@ def detect_persitent_txn_changes(key, s_hist):
 class PersistentTxn(BaseModel):
     account_type: str
 
-def detect_type_of_account(key):
+def detect_type_of_account(key, transaction_type_list):
     client = OpenAI()
 
     prompt = f"""I'll give you an account name I got from the transaction detail document exported by Quickbooks from a certain company.
+    I'll laso provide a list of transaction types recorded for that account.
     You need to determine if the account represents an Inflow (Positive transactions, money coming in), Outflow (Negative transactions, money going out)
     or Mix (Money could be flowing in or out of the company). I'll provide some guiding examples. Anything called 'Income' should eb an Inflow and 
     anything called 'Payroll' should be an Outflow. You should only output Inflow or Outflow if you're over 90% certainty of this assesment. Everything else
-    should called Mix. You need to out put this in JSON format with one field: account_type.
+    should called Mix, especially if you see mixed transaction types like 'Expense' and 'Deposit' in the list. You need to out put this in JSON format with one field: account_type.
     The value of that field will be a string that can be either 'Inflow', 'Outflow' or 'Mix'.
 
     Remember, do not output anythin different than Mix if you're not over 90% certain.
     
     Here's the account name:
-    {key}"""
+    {key}
+    And here's the recorded transaction types:
+    {transaction_type_list}"""
 
     response = client.responses.parse(
         model="gpt-5.4",
@@ -253,7 +256,9 @@ def detect_type_of_account(key):
 
     json_object = json.loads(response.output_parsed.model_dump_json())
     print(key)
+    print(transaction_type_list)
     print(json_object)
+    print("-"*100)
 
     return json_object['account_type']
 
@@ -318,10 +323,8 @@ def project_cash(bank_actual_pivot, bank_tx, cadence_start, cadence_end, cc_acco
     for key, df_line in hist_noncc_bank.groupby(idx_names):
         df_line = df_line.sort_values("date")
         s_hist = build_weekly_series(df_line[["date","amount"]], hist_week_starts)
-        # TODO: Take this line out and have AI determine if this an account that should be inflow (all positive), outflow (All engative) or leave as is.
-        if "Income:Membership Fee Income" in key:
-            s_hist = abs(s_hist)
-        account_type = detect_type_of_account(key)
+        transaction_type_list = df_line['txn_type'].to_list()
+        account_type = detect_type_of_account(key, set(transaction_type_list))
 
         if account_type == 'Inflow':
             s_hist = abs(s_hist)

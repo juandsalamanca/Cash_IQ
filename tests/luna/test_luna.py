@@ -1,4 +1,5 @@
 from src.general_main_process import get_cash_iq
+import time
 
 def test_luna_main():
     COA_PATH = "tests/luna/Luna Locums LLC_Account List.xlsx"
@@ -17,5 +18,6 @@ def test_luna_main():
                                 previous_cashiq_file=previous_cashiq_path, initial_cash_balance=initial_cash_balance, 
                                 AR_AGING_PATH=AR_AGING_PATH, VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, cash_floor=cash_floor)
 
+    time.sleep(5)
     # Check that the output is a valid Excel file (starts with PK, which is the signature for ZIP files, and Excel files are ZIP archives)
     assert excel_bytes[:2] == b'PK'
