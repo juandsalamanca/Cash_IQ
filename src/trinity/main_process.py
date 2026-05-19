@@ -54,7 +54,6 @@ def get_trinity_cash_iq(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, initial_cash_
         except Exception as e:
             traceback.print_exc()
             st.warning(f"Error incorporating debt from AP Aging: {str(e)}")
-
     
     inflows_by_cat, outflows_by_cat, inflows_present, outflows_present = get_classifications("trinity", inflows_present, outflows_present)
     

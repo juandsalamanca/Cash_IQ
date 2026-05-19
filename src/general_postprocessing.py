@@ -95,6 +95,11 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
     total_inflows  = inflows_present.sum(axis=0)
     total_outflows = outflows_present.sum(axis=0)
 
+    print("Inflows present:")
+    print(inflows_present.index)
+    print("Outflows present:")
+    print(outflows_present.index)
+    print("-"*100)
     # Account for any empty split account, marked as unmapped
     inflows_present.index = inflows_present.index.set_levels(
         ['Other Inflows' if level == '' else level for level in inflows_present.index.levels[0]],
@@ -104,7 +109,11 @@ def build_inflows_outflows(combined_full, actual_week_starts, all_week_starts, T
         ['Other Outflows' if level == '' else level for level in outflows_present.index.levels[0]],
         level=0
     )
-   
+    print("Inflows present:")
+    print(inflows_present.index)
+    print("Outflows present:")
+    print(outflows_present.index)
+    print("-"*100)
     return inflows_present, outflows_present, total_inflows, total_outflows
 
 def write_output_excel(all_week_starts, inflows_by_cat, outflows_by_cat, inflows_present, outflows_present, total_inflows,

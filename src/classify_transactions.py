@@ -12,13 +12,13 @@ if os.getenv("OPENAI_API_KEY") is None:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 
-class MisplacedItem(BaseModel):
+class Account(BaseModel):
     name: str
     account_type: str
     detail: str
 
 class MisplacedItems(BaseModel):
-    misplaced: list[MisplacedItem]
+    misplaced: list[Account]
 
 def get_misplaced_outflow_inflow(transaction_list, txn_type):
     client = OpenAI()
@@ -28,7 +28,7 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
     else:
         oposite = "inflows"
 
-    prompt = f"""I will provide for you a list of transaction labels corresponding to  {txn_type}. It will be a list of tuples of three items.
+    prompt = f"""I will provide for you a list of transaction labels corresponding to  {txn_type}. It will be a list of tuples of three items each.
     The first item in each tuple will be the name of the account, the second the account type and the third the account detail.
     You need to check if there is anything in that list that could correspond to the {oposite} list. If there are items that were indeed placed 
     in the wrong list, return them in a list inside a JSON with key 'misplaced'. Only return items if you have over 90% confidence of them being misplaced. 
@@ -57,36 +57,44 @@ def get_misplaced_outflow_inflow(transaction_list, txn_type):
 
 
 class TrinityInflowsFormat(BaseModel):
-    collected: list[str]
-    line_credit: list[str]
-    other: list[str]
+    collected: list[Account]
+    line_credit: list[Account]
+    other: list[Account]
 
 class TrinityOutflowsFormat(BaseModel):
-    expenses_accounts_payable: list[str]
-    credit_cards_loans: list[str]
-    owner_expenses: list[str]
+    expenses_accounts_payable: list[Account]
+    credit_cards_loans: list[Account]
+    owner_expenses: list[Account]
 
 class ParisiInflowsFormat(BaseModel):
-    income: list[str]
-    line_credit: list[str]
-    other: list[str]
+    income: list[Account]
+    line_credit: list[Account]
+    other: list[Account]
 
 
 def classify_transactions(transaction_list, transaction_type, categories, key_mapping, output_format):
     client = OpenAI()
 
-    prompt = f"""Classify each of the cash {transaction_type} from the list provided bellow into one of the provided categories.
-    The categories will have a brief description of what they mean so you can make the best classification possible.
-    Do NOT change any of the names of the {transaction_type} from the provided list. The names of the categorized {transaction_type} must match
-    letter for letter the names in the provided list.
+    def get_prompt(transaction_list):
+        prompt = f"""I will provide for you a list of transaction labels corresponding to  {transaction_type}. 
+        It will be a list of tuples of three items each.
+        The first item in each tuple will be the name of the account, the second the account type and the third the account detail.
+        You need to classify each of those tuples into one of the provided categories. ALL tuples must be put into one category.
+        Do NOT leave any tuple outside of the categorized output. If you're not sure about which category a tuple belongs to, make your best guess.
+        The categories will have a brief description of what they mean so you can make the best classification possible.
+        Do NOT change any of the names of the {transaction_type} from the provided list. The names of each of the items in the categorized 
+        tuples ({transaction_type}) must match letter for letter the names in the provided list.
 
-    {transaction_type} list:
-    {transaction_list}
+        {transaction_type} (tuple) list:
+        {transaction_list}
 
-    Categories:
-    {categories}
+        Categories:
+        {categories}
 
-    """
+        """
+        return prompt
+    
+    prompt = get_prompt(transaction_list)
 
     response = client.responses.parse(
     model="gpt-5.4",
@@ -96,8 +104,64 @@ def classify_transactions(transaction_list, transaction_type, categories, key_ma
     )
 
     json_output = json.loads(response.output_parsed.model_dump_json())
+    print("Pre processed:")
+    print(json_output)
+    print("-"*100)
+    new_json_output = {}
+    for key in json_output:
+        new_json_output[key] = [(item['name'], item['account_type'], item['detail']) for item in json_output[key]]
+    print("Processed:")
+    print(new_json_output)
+    print("-"*100)
 
-    new_dict = {key_mapping[k]: v for k, v in json_output.items()}
+    missing = ["Start the loop"]
+    counter = 0
+
+    # We'll keep checking if any accounts were missed. If so, we categorize them and add them to the final result.
+    while missing != []:
+        
+        # Verify no account is missing in the categorized output:
+        general_account_list  = []
+        for key in new_json_output:
+            general_account_list.extend(new_json_output[key])
+        print("General account list:")
+        print(general_account_list)
+        print("-"*100)
+        missing = [item for item in transaction_list if item not in general_account_list]
+        print("Missing:")
+        print(missing)
+        print("-"*100)
+        if missing:
+
+            prompt = get_prompt(missing)
+
+            missing_response = client.responses.parse(
+            model="gpt-5.4",
+            temperature=0,
+            input=prompt,
+            text_format=output_format
+            )
+
+            missing_json_output = json.loads(missing_response.output_parsed.model_dump_json())
+            new_missing_json_output = {}
+            for key in missing_json_output:
+                new_missing_json_output[key] = [(item['name'], item['account_type'], item['detail']) for item in missing_json_output[key]]
+            print("New missing json outoput:")
+            print(new_missing_json_output)
+            print("-"*100)
+            for key in new_missing_json_output:
+                for item in new_missing_json_output[key]:
+                    new_json_output[key].append(item)
+
+        print("New json output:")
+        print(new_json_output)
+        print("-"*100)
+        if counter >3:
+            raise ValueError("The categorized transactions are missing accounts after 3 retries")
+        print("Counter:", counter)
+        counter += 1
+
+    new_dict = {key_mapping[k]: [item[0] for item in v] for k, v in new_json_output.items()}
     return new_dict
 
 def merge_transactions_with_same_label(label, original_location, inflows_present, outflows_present):
@@ -146,13 +210,19 @@ def get_classifications(client, inflows_present, outflows_present):
 
     inflows_list = inflows_present.index.to_list()
     outflows_list = outflows_present.index.to_list()
-
-
-
+    print("Inflow list:")
+    print(inflows_list)
+    print("Outflow list:")
+    print(outflows_list)
+    print(outflows_present.index)
+    print("-"*100)
     post_correction = False
 
     # Check if there are duplicate labels between inflows and outflows
     repeated = [item for item in inflows_list if item in outflows_list]
+    print("Repeated:")
+    print(repeated)
+    print("-"*100)
     # If so, we add " (Deposit)" to the label so we don't get duplicate indexes in the same projections table
     # This will avoid getting an index malfunction (empty rows) when putting the rows in the build_projections_table funciton
     if repeated:
@@ -174,6 +244,13 @@ def get_classifications(client, inflows_present, outflows_present):
 
         inflows_list = new_inflows_index
 
+    print("Inflow list:")
+    print(inflows_list)
+    print("Outflow list:")
+    print(outflows_list)
+    print("Outflows present:")
+    print(outflows_present.index)
+    print("-"*100)
 
     if post_correction:
         inflows_list, outflows_list, inflows_present, outflows_present = correct_misplaced_flows(inflows_list, 
@@ -183,6 +260,9 @@ def get_classifications(client, inflows_present, outflows_present):
 
     inflows_by_cat = classify_transactions(inflows_list, "inflows", inflow_categories, key_mapping_inflows, inflows_format)
     outflows_by_cat = classify_transactions(outflows_list, "outflows", outflow_categories, key_mapping_outflows, outflows_format)
+    print(inflows_by_cat)
+    print(outflows_by_cat)
+    print("-"*100)
 
     return inflows_by_cat, outflows_by_cat, inflows_present, outflows_present
 
@@ -254,6 +334,14 @@ if __name__ == "__main__":
 
     parisi_key_mapping_inflows = {'line_credit': 'Line of Credit Advances', 'other': 'Other Income', 'income': 'Income'}
 
+    inflows = [('N/P On Deck Capital (Deposit)', 'Long Term Liabilities', 'Notes Payable'), ("Owner's Investment", 'Equity', "Owner's Equity"), ('Sales', 'Income', 'Sales of Product Income'), ('Vantage LOC (Deposit)', 'Long Term Liabilities', 'Notes Payable')]
+    outflows = [('Other Outflows', 'Unmapped', ''), ('AMEX LOC', 'Other Current Liabilities', 'Line of Credit'), ('Accounts Payable (A/P)', 'Accounts payable (A/P)', 'Accounts Payable (A/P)'), ('Advertising & Marketing', 'Expenses', 'Advertising/Promotional'), ('American Express', 'Unmapped', ''), ('American Express Gold Card (2003) - 2', 'Credit Card', 'Credit Card'), ('Auto:Auto Insurance', 'Expenses', 'Insurance'), ('Bank Charges & Fees:Bank Fees', 'Expenses', 'Bank Charges'), ('CREDIT CARD (5290) - 1', 'Credit Card', 'Credit Card'), ('Charitable Contributions', 'Expenses', 'Charitable Contributions'), ('Chase 4571', 'Credit Card', 'Credit Card'), ('Chase 9754', 'Credit Card', 'Credit Card'), ('Continuing Education', 'Expenses', 'Other Business Expenses'), ('Direct Deposit Payable', 'Other Current Liabilities', 'Direct Deposit Payable'), ('Dues & subscription', 'Expenses', 'Dues & subscriptions'), ('Job Supplies', 'Cost of Goods Sold', 'Supplies & Materials - COGS'), ('Legal & Professional Services:Consulting', 'Expenses', 'Legal & Professional Fees'), ('N/P Ascentium Capital', 'Long Term Liabilities', 'Notes Payable'), ('N/P Ascentium Capital 2', 'Long Term Liabilities', 'Notes Payable'), ('N/P On Deck Capital', 'Long Term Liabilities', 'Notes Payable'), ('Office Supplies & Software', 'Expenses', 'Office/General Administrative Expenses'), ("Owner's Pay & Personal Expenses", 'Equity', "Owner's Equity"), ('Payroll Expenses:Employee Health Contributions', 'Expenses', 'Insurance'), ('Payroll Liabilities:Federal Taxes (941/944)', 'Other Current Liabilities', 'Payroll Tax Payable'), ('QuickBooks Tax Holding Account', 'Other Current Assets', 'Other Current Assets'), ('Rent & Lease', 'Expenses', 'Rent or Lease of Buildings'), ('Repairs & Maintenance', 'Expenses', 'Repair & Maintenance'), ('Taxes Paid', 'Expenses', 'Taxes Paid'), ('Utilities:Electricity', 'Expenses', 'Utilities'), ('Utilities:Internet', 'Expenses', 'Utilities'), ('Vantage LOC', 'Long Term Liabilities', 'Notes Payable'), ('citi business cc', 'Credit Card', 'Credit Card'), ('American Express Gold Card (2003) - 2', 'Credit Card Payment', ''), ('CREDIT CARD (5290) - 1', 'Credit Card Payment', ''), ('Chase 9600', 'Credit Card Payment', ''), ('citi business cc', 'Credit Card Payment', ''), ('Chase 4571', 'Credit Card Payment', ''), ('My Best Buy® Visa® Card (7115) - 3', 'Credit Card Payment', ''), ('Chase 9754', 'Credit Card Payment', '')]
+    inflows_by_cat = classify_transactions(inflows, "inflows", inflow_categories, key_mapping_inflows, TrinityInflowsFormat)
+    print(inflows_by_cat)
+    print("-"*100)
+    outflows_by_cat = classify_transactions(outflows, "outflows", outflow_categories, key_mapping_outflows, TrinityOutflowsFormat)
+    print(outflows_by_cat)
+
     import json
 
     data = {"trinity":
@@ -267,11 +355,5 @@ if __name__ == "__main__":
             "parisi": 
             {"inflow_categories": parisi_inflow_categories, "outflow_categories": outflow_categories, "key_mapping_inflows": parisi_key_mapping_inflows, "key_mapping_outflows": key_mapping_outflows}}
     
-    with open('client_data.json', 'w') as f:
-        json.dump(data, f)
-
-    
-if __name__ == "__main__":
-    inflows = [('Other Inflows', 'Unmapped', ''), ('Benjamin Quirk', 'Unmapped', ''), ('Channel selling fees:Stripe fees', 'Cost of Goods Sold', 'Other Costs of Services - COS'), ('Christine Fujiyama', 'Unmapped', ''), ('Deferred Revenue', 'Other Current Liabilities', 'Deferred Revenue'), ('Income:Initiation/Onboarding Fee', 'Income', 'Service/Fee Income'), ('Income:Membership Fee Income', 'Income', 'Service/Fee Income'), ('Income:Other - Cancellations/Late Fees', 'Income', 'Discounts/Refunds Given'), ('Justin Dean', 'Unmapped', ''), ('Kevin Schwartz:31000 Contributions - Kevin Schwartz', 'Unmapped', ''), ('Matthew Stadtmauer', 'Unmapped', ''), ('Ruth Stadtmauer', 'Unmapped', '')]
-    response = get_misplaced_outflow_inflow(inflows, 'inflows')
-    print(response)
+    #with open('client_data.json', 'w') as f:
+    #    json.dump(data, f)

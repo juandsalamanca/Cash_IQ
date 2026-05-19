@@ -33,7 +33,6 @@ def get_cash_iq(client, COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, previous_cash
 
     progress_text = "Processing raw data and generating projections..."
     my_bar = st.progress(0, text=progress_text)
-        
     inflows_by_cat, outflows_by_cat, cc_accounts = main_function(COA_PATH, GL_PATH, date_strt, OUTPUT_XLSX, 
                 initial_cash_balance=initial_cash_balance, AR_AGING_PATH=AR_AGING_PATH, VENDOR_SUMMARY_PATH=VENDOR_SUMMARY_PATH, 
                 AR_BUCKET_ASSUMPTIONS=AR_BUCKET_ASSUMPTIONS, AP_AGING=AP_AGING, BALANCE=BALANCE)
